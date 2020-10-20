@@ -1,4 +1,4 @@
-#include "bot_ai.h"
+﻿#include "bot_ai.h"
 #include "botcommon.h"
 #include "botdatamgr.h"
 #include "botmgr.h"

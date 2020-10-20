@@ -1,4 +1,5 @@
-/*
+﻿/*
+	 
  * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1502,7 +1503,7 @@ void ScriptMgr::OnPlayerEnterMap(Map* map, Player* player)
     sEluna->OnPlayerEnter(map, player);
 #endif
 
-    FOREACH_SCRIPT(AllMapScript)->OnPlayerEnterAll(map, player);
+
     FOREACH_SCRIPT(PlayerScript)->OnMapChanged(player);
 
     SCR_MAP_BGN(WorldMapScript, map, itr, end, entry, IsWorldMap);
@@ -1634,18 +1635,7 @@ bool ScriptMgr::OnCastItemCombatSpell(Player* player, Unit* victim, SpellInfo co
     GET_SCRIPT_RET(ItemScript, item->GetScriptId(), tmpscript, true);
     return tmpscript->OnCastItemCombatSpell(player, victim, spellInfo, item);
 }
-// Needs Fixed 需要修复
-//void ScriptMgr::OnCreatureUpdate(Creature* creature, uint32 diff)
-//{
-//    ASSERT(creature);
-//
-//
-//    FOREACH_SCRIPT(AllCreatureScript)->OnAllCreatureUpdate(creature, diff);
-//
-//    GET_SCRIPT(CreatureScript, creature->GetScriptId(), tmpscript);
-//    tmpscript->OnUpdate(creature, diff);
-//}
-//
+
 void ScriptMgr::OnGossipSelect(Player* player, Item* item, uint32 sender, uint32 action)
 {
     ASSERT(player);
@@ -1685,6 +1675,9 @@ CreatureAI* ScriptMgr::GetCreatureAI(Creature* creature)
 GameObjectAI* ScriptMgr::GetGameObjectAI(GameObject* gameobject)
 {
     ASSERT(gameobject);
+#ifdef ELUNA
+    sEluna->OnSpawn(gameobject);
+#endif			
 
     GET_SCRIPT_RET(GameObjectScript, gameobject->GetScriptId(), tmpscript, nullptr);
     return tmpscript->GetAI(gameobject);
@@ -1694,6 +1687,10 @@ bool ScriptMgr::OnAreaTrigger(Player* player, AreaTriggerEntry const* trigger)
 {
     ASSERT(player);
     ASSERT(trigger);
+#ifdef ELUNA
+    if (sEluna->OnAreaTrigger(player, trigger))
+        return false;
+#endif			
 
     GET_SCRIPT_RET(AreaTriggerScript, sObjectMgr->GetAreaTriggerScriptId(trigger->ID), tmpscript, false);
     return tmpscript->OnTrigger(player, trigger);
@@ -1948,13 +1945,6 @@ bool ScriptMgr::OnCriteriaCheck(uint32 scriptId, Player* source, Unit* target)
     return tmpscript->OnCheck(source, target);
 }
 
-//Called From Unit::DealDamage
-uint32 ScriptMgr::DealDamage(Unit* AttackerUnit, Unit *pVictim, uint32 damage, DamageEffectType damagetype)
-{
-    FOR_SCRIPTS_RET(UnitScript, itr, end, damage)
-        damage = itr->second->DealDamage(AttackerUnit, pVictim, damage, damagetype);
-    return damage;
-}
 
 // Player
 void ScriptMgr::OnPVPKill(Player* killer, Player* killed)

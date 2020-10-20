@@ -39,23 +39,27 @@ void Eluna::OnLearnTalents(Player* pPlayer, uint32 talentId, uint32 talentRank, 
     CallAllFunctions(PlayerEventBindings, key);
 }
 
-bool Eluna::OnCommand(Player* player, const char* text)//bool Eluna::OnCommand(Player* player, std::string_view text)//
+//bool Eluna::OnCommand(Player* player, const char* text)////
+bool Eluna::OnCommand(Player* player, std::string_view text)
 {
+    char* s = std::string(text).data();
     // If from console, player is NULL
     if (!player || player->GetSession()->GetSecurity() >= SEC_ADMINISTRATOR)
     {
-        std::string reload = text;
+        std::string reload = s;
         std::transform(reload.begin(), reload.end(), reload.begin(), ::tolower);
         if (reload.find("reload eluna") == 0)
         {
             ReloadEluna();
             return false;
         }
+
     }
 
     START_HOOK_WITH_RETVAL(PLAYER_EVENT_ON_COMMAND, true);
     Push(player);
-    Push(text);
+     
+    Push(s);
     return CallAllFunctionsBool(PlayerEventBindings, key, true);
 }
 

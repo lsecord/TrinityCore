@@ -6207,7 +6207,7 @@ void ObjectMgr::LoadGossipText()
             }
 
             // check broadcast_text correctness
-            if (gOption.BroadcastTextID)
+            /* if (gOption.BroadcastTextID)
             {
                 if (BroadcastText const* bcText = sObjectMgr->GetBroadcastText(gOption.BroadcastTextID))
                 {
@@ -6223,7 +6223,7 @@ void ObjectMgr::LoadGossipText()
                 }
 
 
-            }
+            } */
         }
 
     }

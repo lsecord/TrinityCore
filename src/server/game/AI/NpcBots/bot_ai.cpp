@@ -1,5 +1,4 @@
-#include "bot_ai.h"
-//#include "botcommon.h"
+﻿#include "bot_ai.h"
 #include "bot_Events.h"
 #include "bot_GridNotifiers.h"
 #include "botmgr.h"
@@ -1708,7 +1707,7 @@ void bot_ai::_listAuras(Player const* player, Unit const* unit) const
         if (me->GetMaxPower(POWER_MANA) > 1)
         {
             botstring << "\n施放技能时每5秒回复法力值: " << float((_botclass == BOT_CLASS_SPHYNX ? -1.f : 1.f) * me->GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) * sWorld->getRate(RATE_POWER_MANA) * 5.0f);
-            botstring << "\非施放技能时每5秒回复法力值: " << float((_botclass == BOT_CLASS_SPHYNX ? -1.f : 1.f) * me->GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * sWorld->getRate(RATE_POWER_MANA) * 5.0f);
+            botstring << "\n非施放技能时每5秒回复法力值: " << float((_botclass == BOT_CLASS_SPHYNX ? -1.f : 1.f) * me->GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * sWorld->getRate(RATE_POWER_MANA) * 5.0f);
         }
         botstring << "\n急速: " << (haste >= 0 ? "+" : "-") << float(haste) << " pct";
         botstring << "\n命中: +" << float (hit) << " pct";
@@ -5165,7 +5164,7 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
             std::ostringstream message2;
             if (_botclass == BOT_CLASS_SPHYNX)
             {
-                message1 << "Are you sure you want to risk  << "的注意?";
+                message1 << "你确定要冒险引起 " << me->GetName() << "的注意?";
                 message2 << "<投入硬币>";
             }
             else if (_botclass == BOT_CLASS_DREADLORD)
@@ -7116,7 +7115,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 {
                     //BotWhisper("placeholder", player);
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s 在你40级之前不会加入你"", me->GetName().c_str());
+                    ch.PSendSysMessage("%s 在你40级之前不会加入你", me->GetName().c_str());
                     break;
                 }
 
