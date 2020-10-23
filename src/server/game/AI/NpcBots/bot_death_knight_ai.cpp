@@ -822,7 +822,7 @@ public:
                 {
                     std::list<Unit*> targets;
                     GetNearbyTargetsList(targets, 9.f, 1);
-                    if (targets.size() >= 4)
+                    if (targets.size() >= 2)
                         if (doCast(me, GetSpell(BLOOD_BOIL_1)))
                             return;
                 }
