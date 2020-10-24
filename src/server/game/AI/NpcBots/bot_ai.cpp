@@ -880,6 +880,42 @@ void bot_ai::RemoveBotCommandState(uint8 st)
 {
     m_botCommandState &= ~st;
 }
+
+bool bot_ai::IsPointedHealTarget(Unit const* target) const
+{
+    if (Group const* gr = (IAmFree() ? nullptr : master->GetGroup()))
+        if (uint8 healFlags = BotMgr::GetHealTargetIconFlags())
+            for (uint8 i = 0; i != TARGETICONCOUNT; ++i)
+                if (healFlags & GroupIconsFlags[i])
+                    if (target->GetGUID() == gr->GetTargetIcons()[i])
+                        return true;
+
+    return false;
+}
+//unused
+bool bot_ai::IsPointedTankingTarget(Unit const* target) const
+{
+    if (Group const* gr = (IAmFree() ? nullptr : master->GetGroup()))
+        if (uint8 tankFlags = BotMgr::GetTankTargetIconFlags())
+            for (uint8 i = 0; i != TARGETICONCOUNT; ++i)
+                if (tankFlags & GroupIconsFlags[i])
+                    if (target->GetGUID() == gr->GetTargetIcons()[i])
+                        return true;
+
+    return false;
+}
+//unused
+bool bot_ai::IsPointedDPSTarget(Unit const* target) const
+{
+    if (Group const* gr = (IAmFree() ? nullptr : master->GetGroup()))
+        if (uint8 dpsFlags = BotMgr::GetDPSTargetIconFlags())
+            for (uint8 i = 0; i != TARGETICONCOUNT; ++i)
+                if (dpsFlags & GroupIconsFlags[i])
+                    if (target->GetGUID() == gr->GetTargetIcons()[i])
+                        return true;
+
+    return false;
+}
 // Buffs And Heal (really)
 // Priority as follows: 1) heal players 2) buff players 3) heal bots 4) buff bots
 // Priority adjustments to be considered
@@ -1068,7 +1104,7 @@ void bot_ai::BuffAndHealGroup(uint32 diff)
                     if (Unit* unit = ObjectAccessor::GetUnit(*me, guid))
                     {
                         if (unit->IsAlive() && !unit->HasUnitState(UNIT_STATE_ISOLATED) && me->GetMap() == unit->FindMap() && me->GetDistance(unit) < 40 &&
-                            GetHealthPCT(unit) < 95 && master->GetVictim() != unit && !IsInBotParty(unit->GetVictim()) &&
+                            master->GetVictim() != unit && !IsInBotParty(unit->GetVictim()) &&
                             unit->GetEntry() != SHAMAN_EARTH_ELEMENTAL &&
                             !(unit->GetTypeId() == TYPEID_UNIT && unit->ToCreature()->GetCreatureTemplate()->type == CREATURE_TYPE_MECHANICAL) &&
                             unit->GetReactionTo(master) >= REP_NEUTRAL)
@@ -11287,7 +11323,7 @@ bool bot_ai::GlobalUpdate(uint32 diff)
                     interrupt = true; //Shattering Throw wasting
             }
             if (!interrupt && !(target == master && me->GetDistance(target) < INTERACTION_DISTANCE) &&
-                info->HasEffect(SPELL_EFFECT_HEAL) && GetHealthPCT(target) > 90)
+                info->HasEffect(SPELL_EFFECT_HEAL) && GetHealthPCT(target) > 90 && !IsPointedHealTarget(target))
             {
                 bool isAreaSpell = false;
                 for (uint8 j = 0; j != 3 && isAreaSpell == false; ++j)

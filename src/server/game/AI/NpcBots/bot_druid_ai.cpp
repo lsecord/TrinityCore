@@ -1237,7 +1237,8 @@ public:
             if (!target || !target->IsAlive() || target->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION || me->GetDistance(target) > 40)
                 return false;
             uint8 hp = GetHealthPCT(target);
-            if (hp > 95 &&
+			bool pointed = IsPointedHealTarget(target);
+            if (hp > 95 && !pointed &&
                 (!target->IsInCombat() || target->getAttackers().empty() || !IsTank(target) || !me->GetMap()->IsRaid()))
                 return false;
 
@@ -1246,7 +1247,7 @@ public:
             int32 hppctps = int32(hps * 100.f / float(target->GetMaxHealth()));
             int32 xphploss = xphp > int32(target->GetMaxHealth()) ? 0 : abs(int32(xphp - target->GetMaxHealth()));
             int32 xppct = hp + hppctps * 2;
-            if (xppct >= 95 && hp >= 25)
+            if (xppct >= 95 && hp >= 25 && !pointed)
                 return false;
 
             if (IsTank() && xppct > 25)

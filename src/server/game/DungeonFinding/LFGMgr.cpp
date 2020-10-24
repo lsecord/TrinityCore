@@ -1193,7 +1193,7 @@ void LFGMgr::UpdateProposal(uint32 proposalId, ObjectGuid guid, bool accept)
         {
             if (player->HaveBot())
             {
-                for (LfgProposalPlayerContainer::const_iterator itPlayers = proposal.players.begin(); itPlayers != proposal.players.end(); ++itPlayers)
+                for (LfgProposalPlayerContainer::iterator itPlayers = proposal.players.begin(); itPlayers != proposal.players.end(); ++itPlayers)
                 {
                     ObjectGuid bguid = itPlayers->first;
                     if (bguid.IsPlayer())
@@ -1201,7 +1201,7 @@ void LFGMgr::UpdateProposal(uint32 proposalId, ObjectGuid guid, bool accept)
                     if (!player->GetBotMgr()->GetBot(bguid))
                         continue;
 
-                    UpdateProposal(proposalId, bguid, accept);
+                    itPlayers->second.accept = LfgAnswer(accept);
                 }
             }
         }

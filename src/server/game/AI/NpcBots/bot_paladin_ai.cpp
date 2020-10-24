@@ -896,7 +896,8 @@ public:
             if (!target || !target->IsAlive() || target->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION || me->GetDistance(target) > 40)
                 return false;
             uint8 hp = GetHealthPCT(target);
-            if (hp > 90 &&
+			bool pointed = IsPointedHealTarget(target);
+            if (hp > 90 && !pointed &&
                 (!target->IsInCombat() || target->getAttackers().empty() || !IsTank(target) || !me->GetMap()->IsRaid()))
                 return false;
             //try to preserve heal if Divine Plea is active
@@ -908,7 +909,7 @@ public:
             int32 hppctps = int32(hps * 100.f / float(target->GetMaxHealth()));
             int32 xphploss = xphp > int32(target->GetMaxHealth()) ? 0 : abs(int32(xphp - target->GetMaxHealth()));
             int32 xppct = hp + hppctps * 2.5f;
-            if (xppct >= 95 && hp >= 25)
+            if (xppct >= 95 && hp >= 25 && !pointed)
                 return false;
 
             //Lay on Hands

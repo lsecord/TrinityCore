@@ -208,6 +208,10 @@ class bot_ai : public CreatureAI
         virtual bool HealTarget(Unit* /*target*/, uint32 /*diff*/) { return false; }
         virtual bool BuffTarget(Unit* /*target*/, uint32 /*diff*/) { return false; }
 
+        bool IsPointedHealTarget(Unit const* target) const;
+        bool IsPointedTankingTarget(Unit const* target) const;
+        bool IsPointedDPSTarget(Unit const* target) const;
+
         void BuffAndHealGroup(uint32 diff);
         void RezGroup(uint32 REZZ);
         void CureGroup(uint32 cureSpell, uint32 diff);
