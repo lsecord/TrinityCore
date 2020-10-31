@@ -51,15 +51,15 @@ INSERT INTO `conditions` (`SourceTypeOrReferenceId`,`SourceGroup`,`SourceEntry`,
 
 DELETE FROM `creature_text` WHERE `CreatureID` IN (23682,23775);
 INSERT INTO `creature_text` (`CreatureID`,`GroupID`,`ID`,`Text`,`Type`,`Language`,`Probability`,`Emote`,`Duration`,`Sound`,`BroadcastTextId`,`TextRange`,`comment`) VALUES
-(23682,0,0,'It is over, your search is done. Let fate choose now, the righteous one.',12,0,100,0,0,11961,22261,0,'Headless Horseman SAY_ENTRANCE'),
-(23682,1,0,'Here\'s my body, fit and pure!  Now, your blackened souls I\'ll cure!',14,0,100,0,0,12567,22271,0,'Headless Horseman SAY_REJOINED'),
-(23682,2,0,'Harken, cur!  Tis you I spurn!  Now feel... the burn!',11,0,100,0,0,12573,22587,0,'Headless Horseman SAY_CONFLAGRATION'),
-(23682,3,0,'Soldiers arise, stand and fight! Bring victory at last to this fallen knight!',12,0,100,0,0,11963,23861,0,'Headless Horseman SAY_SPROUTING_PUMPKINS'),
-(23682,4,0,'This end have I reached before.  What new adventure lies in store?',12,0,100,0,0,11964,23455,0,'Headless Horseman SAY_DEATH'),
-(23682,5,0,'Your body lies beaten, battered and broken! Let my curse be your own, fate has spoken!',14,0,100,0,0,11962,40546,0,'Headless Horseman SAY_KILL_PLAYER'),
-(23775,0,0,'So eager you are, for my blood to spill. Yet to vanquish me, \'tis my head you must kill!',14,0,100,0,0,11969,22757,0,'Head of the Horseman SAY_LOST_HEAD'),
-(23775,1,0,'Get over here, you idiot!',12,0,100,0,0,12569,22415,0,'Head of the Horseman SAY_REQUEST_BODY'),
-(23775,2,0,'Horseman rise...',1,0,100,0,0,0,22695,0,'Head of the Horseman SAY_PLAYER_RISE'),
-(23775,3,0,'Your time is nigh...',1,0,100,0,0,0,22696,0,'Head of the Horseman SAY_PLAYER_TIME'),
-(23775,4,0,'You felt death once...',1,0,100,22,0,0,22720,0,'Head of the Horseman SAY_PLAYER_DEATH'),
-(23775,5,0,'Now, know demise!',1,0,100,5,0,0,22721,0,'Head of the Horseman SAY_PLAYER_DEMISE');
+(23682,0,0,'湮远而艰辛的探索到此为止，真正的正义者将由命运择示。',12,0,100,0,0,11961,22261,0,'Headless Horseman SAY_ENTRANCE'),
+(23682,1,0,'我的躯体健壮而纯洁！现在，让我来治愈你们这帮阴暗的灵魂吧。',14,0,100,0,0,12567,22271,0,'Headless Horseman SAY_REJOINED'),
+(23682,2,0,'天空一片黑暗,火焰仍在肆虐,你的攻击豪无意义,命运之轮已经开始旋转.',11,0,100,0,0,12573,22587,0,'Headless Horseman SAY_CONFLAGRATION'),
+(23682,3,0,'愤怒之骑士，英勇之战士，……为胜利而战。',12,0,100,0,0,11963,23861,0,'Headless Horseman SAY_SPROUTING_PUMPKINS'),
+(23682,4,0,'小镇还在燃烧，我是时候撤退了。',12,0,100,0,0,11964,23455,0,'Headless Horseman SAY_DEATH'),
+(23682,5,0,'你们的身躯将支离破碎，你们的灵魂将得到诅咒。',14,0,100,0,0,11962,40546,0,'Headless Horseman SAY_KILL_PLAYER'),
+(23775,0,0,'你们如此渴望将我灭亡,可不知,首级还在,我便可逃过一切灾秧(笑声)。远而艰辛的探索到此为止,真正的正义者由命运索视。堕落之骑士,致领土之战士,遵从契约之召,为胜利而战!',14,0,100,0,0,11969,22757,0,'Head of the Horseman SAY_LOST_HEAD'),
+(23775,1,0,'过来啊，白痴！',12,0,100,0,0,12569,22415,0,'Head of the Horseman SAY_REQUEST_BODY'),
+(23775,2,0,'骑士,复活!',1,0,100,0,0,0,22695,0,'Head of the Horseman SAY_PLAYER_RISE'),
+(23775,3,0,'地狱烈焰竟已不在辉煌,你的生命火烛也将暗弱无光。',1,0,100,0,0,0,22696,0,'Head of the Horseman SAY_PLAYER_TIME'),
+(23775,4,0,'你的死期到了.',1,0,100,22,0,0,22720,0,'Head of the Horseman SAY_PLAYER_DEATH'),
+(23775,5,0,'……可明日,又要面对怎样的殊途?',1,0,100,5,0,0,22721,0,'Head of the Horseman SAY_PLAYER_DEMISE');

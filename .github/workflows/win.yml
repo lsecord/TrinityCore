@@ -1,0 +1,81 @@
+name: win64
+on:
+  push:
+   tags: 
+     - 'v*'
+#  pull_request:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: setup-msbuild
+      uses: microsoft/setup-msbuild@v1
+      with:
+    # Folder location of where vswhere.exe is located if a self-hosted agent
+           vswhere-path: # optional
+    # Version of Visual Studio to search; defaults to latest if not specified
+           vs-version: # optional
+    # Restore from cache the previously built ports. If cache-miss, download, build vcpkg.
+   # - name: vcpkg
+    #  uses: actions/cache@v1
+      #with:
+      #  key: vcpkg
+      #  path: 'C:/vcpkg'
+    - name: add lib
+      run: |
+       
+         vcpkg integrate install
+         vcpkg install openssl:x64-windows
+         Get-ChildItem C:\vcpkg\installed\x64-windows\bin
+         Get-ChildItem C:\vcpkg\installed\x64-windows\lib  
+    - name: Setup
+      run: |
+        #cmd
+        set BOOST_ROOT=%BOOST_ROOT_1_72_0%
+        $powershell
+        $env:BOOST_ROOT=$env:BOOST_ROOT_1_72_0
+        mkdir bin
+        cd bin
+        cmake ../ -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSCRIPTS=dynamic -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DOPENSSL_ROOT_DIR:PATH="C:\vcpkg\installed\x64-windows" -DLIB_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="C:\vcpkg\installed\x64-windows\include" -DSSL_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" 
+        cmake --build . --config Release
+    - name: Check executables
+      run: |
+        cd D:\a\TrinityCore-NPCBOT-eluna\TrinityCore-NPCBOT-eluna\bin\bin\Release\
+        ./authserver.exe --version
+        ./worldserver.exe --version
+    - name: zip pack
+      uses: montudor/action-zip@v0.1.0
+      with:
+        args: zip -qq -r TrinityCore.zip D:\a\TrinityCore-NPCBOT-eluna\TrinityCore-NPCBOT-eluna\bin\bin\Release\
+    - name: Create a Release
+      uses: actions/create-release@v1.1.4
+      with:
+        # The name of the tag. This should come from the webhook payload, `github.GITHUB_REF` when a user pushes a new tag
+        tag_name: ${{ github.ref }}
+        # The name of the release. For example, `Release v1.0.1`
+        release_name: Release ${{ github.ref }}
+        # Text describing the contents of the tag.
+        #body: # optional
+        # Path to file with information about the tag.
+        #body_path: # optional
+        # `true` to create a draft (unpublished) release, `false` to create a published one. Default: `false`
+        draft: false
+        # `true` to identify the release as a prerelease. `false` to identify the release as a full release. Default: `false`
+        prerelease: false
+        # Any branch or commit SHA the Git tag is created from, unused if the Git tag already exists. Default: SHA of current commit
+        #commitish: # optional
+        # Owner of the repository if it is not the current one
+        #owner: # optional
+        # Repository on which to release.  Used only if you want to create the release on another repo
+        #repo: # optional
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+         upload_url: ${{ steps.create_release.outputs.upload_url }}
+         asset_path: D:\a\TrinityCore-NPCBOT-eluna\TrinityCore-NPCBOT-eluna\bin\bin\Release\TrinityCore.zip
+         asset_name: TrinityCore.zip
+         asset_content_type: application/zip
