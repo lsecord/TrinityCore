@@ -384,7 +384,7 @@ DisconnectToleranceInterval = 0
 #        Default:     1 - (Enabled)
 #                     0 - (Disabled)
 
-mmap.enablePathFinding = 0
+mmap.enablePathFinding = 1
 
 #
 #    vmap.enableLOS
@@ -1362,7 +1362,7 @@ Updates.Redundancy  = 0
 
 #
 #    Updates.ArchivedRedundancy
-#        Description: Check hashes of archived updates (slows down startup).
+#        Description: 检查已存档更新的哈希值（降低启动速度）。.
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
@@ -1370,12 +1370,12 @@ Updates.ArchivedRedundancy = 0
 
 #
 #    Updates.AllowRehash
-#        Description: Inserts the current file hash in the database if it is left empty.
-#                     Useful if you want to mark a file as applied but you don't know its hash.
+#        Description: 如果当前文件哈希为空，则将其插入数据库中。
+#如果您想将文件标记为已应用但不知道其哈希值，则很有用
 #        Default:     1 - (Enabled)
 #                     0 - (Disabled)
 
-Updates.AllowRehash = 0
+Updates.AllowRehash = 1
 
 #
 #    Updates.CleanDeadRefMaxCount
@@ -1401,7 +1401,7 @@ Updates.CleanDeadRefMaxCount = 3
 #        Default:     1 - (Enabled)
 #                     0 - (Disabled)
 
-HotSwap.Enabled = 1
+HotSwap.Enabled = 0
 
 #
 #    HotSwap.ScriptDir
@@ -1618,7 +1618,7 @@ ThreatRadius = 60
 #                     1.5 - (Enabled, 150%)
 #                     0   - (Disabled, 0%)
 
-Rate.Creature.Aggro = 0.7
+Rate.Creature.Aggro = 1
 
 #
 #    CreatureFamilyFleeAssistanceRadius
@@ -1720,10 +1720,10 @@ Rate.Creature.Elite.WORLDBOSS.Damage = 3.7
 #                     1 - (Rate.Creature.Elite.WORLDBOSS.SpellDamage)
 
 Rate.Creature.Normal.SpellDamage          = 3
-Rate.Creature.Elite.Elite.SpellDamage     = 3
+Rate.Creature.Elite.Elite.SpellDamage     = 2
 Rate.Creature.Elite.RARE.SpellDamage      = 3
 Rate.Creature.Elite.RAREELITE.SpellDamage = 3
-Rate.Creature.Elite.WORLDBOSS.SpellDamage = 2.2
+Rate.Creature.Elite.WORLDBOSS.SpellDamage = 1.5
 
 #
 #    Rate.Creature.Normal.HP
@@ -1749,10 +1749,10 @@ Rate.Creature.Elite.WORLDBOSS.SpellDamage = 2.2
 # Rate.Creature.Elite.RAREELITE.HP = 3
 # Rate.Creature.Elite.WORLDBOSS.HP = 1.5
 Rate.Creature.Normal.HP          = 3
-Rate.Creature.Elite.Elite.HP     = 3.75
+Rate.Creature.Elite.Elite.HP     = 3.0
 Rate.Creature.Elite.RARE.HP      = 4.5
 Rate.Creature.Elite.RAREELITE.HP = 4.5
-Rate.Creature.Elite.WORLDBOSS.HP = 2.25									
+Rate.Creature.Elite.WORLDBOSS.HP = 2.0									
 #
 #    Creature.PickPocketRefillDelay
 #        Description: Time in seconds that the server will wait before refilling the pickpocket loot
@@ -2300,8 +2300,8 @@ Rate.Drop.Item.ReferencedAmount = 1
 #                     1 - (Rate.XP.Quest)
 #                     1 - (Rate.XP.Explore)
 
-Rate.XP.Kill    = 1
-Rate.XP.Quest   = 1
+Rate.XP.Kill    = 0.3
+Rate.XP.Quest   = 0.5
 Rate.XP.Explore = 1
 
 #
@@ -4291,7 +4291,7 @@ NpcBot.BaseFollowDistance = 20
 #        Note:        Maximum overall xp reduction is 90%.
 #        Default:     0
 
-NpcBot.XpReduction = 30
+NpcBot.XpReduction = 0
 
 #    NpcBot.HealTargetIconsMask
 #        Description: Icon number bitmask which bots use to search for additional
@@ -4307,8 +4307,15 @@ NpcBot.XpReduction = 30
 #                     32 - Square
 #                     64 - Cross
 #                     128 - Skull
-
-NpcBot.HealTargetIconsMask = 38
+#1-星
+#2-圈
+#4-钻石
+#8-三角形
+#16-月亮
+#32-正方形
+#64-XX
+#128-头骨
+NpcBot.HealTargetIconsMask = 46
 
 #    NpcBot.TankTargetIconMask
 #        Description: Icon number bitmask which bot tanks use to search for primary target.
@@ -4361,9 +4368,9 @@ NpcBot.DPSTargetIconMask = 0
 #        Minimum:     0.1
 #        Maximum:    10.0
 
-NpcBot.Mult.Damage.Physical = 0.2
-NpcBot.Mult.Damage.Spell    = 0.3
-NpcBot.Mult.Healing         = 0.2
+NpcBot.Mult.Damage.Physical = 0.4
+NpcBot.Mult.Damage.Spell    = 0.5
+NpcBot.Mult.Healing         = 0.3
 
 #    NpcBot.Enable.Dungeon
 #    NpcBot.Enable.Raid
