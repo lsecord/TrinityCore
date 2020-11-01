@@ -3,7 +3,7 @@ on:
   push:
    tags: 
      - 'v*'
-#  pull_request:
+  #pull_request:
 jobs:
   build:
     runs-on: windows-latest
@@ -17,11 +17,6 @@ jobs:
     # Version of Visual Studio to search; defaults to latest if not specified
            vs-version: # optional
     # Restore from cache the previously built ports. If cache-miss, download, build vcpkg.
-   # - name: vcpkg
-    #  uses: actions/cache@v1
-      #with:
-      #  key: vcpkg
-      #  path: 'C:/vcpkg'
     - name: add lib
       run: |
        
@@ -39,17 +34,22 @@ jobs:
         cd bin
         cmake ../ -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSCRIPTS=dynamic -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DOPENSSL_ROOT_DIR:PATH="C:\vcpkg\installed\x64-windows" -DLIB_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="C:\vcpkg\installed\x64-windows\include" -DSSL_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" 
         cmake --build . --config Release
-    - name: Check executables
-      run: |
-        cd D:\a\TrinityCore-NPCBOT-eluna\TrinityCore-NPCBOT-eluna\bin\bin\Release\
-        ./authserver.exe --version
-        ./worldserver.exe --version
+    #- name: Check executables
+      #run: |
+      #  cd D:\a\TrinityCore-NPCBOT-eluna\TrinityCore-NPCBOT-eluna\bin\bin\Release\
+      #  authserver.exe --version
+       # worldserver.exe --version
     - name: zip pack
-      uses: montudor/action-zip@v0.1.0
+      uses: DuckSoft/create-7z-action@v1.0
       with:
-        args: zip -qq -r TrinityCore.zip D:\a\TrinityCore-NPCBOT-eluna\TrinityCore-NPCBOT-eluna\bin\bin\Release\
+      # file/folder path to compress
+        pathSource: D:\a\TrinityCore-NPCBOT-eluna\TrinityCore-NPCBOT-eluna\bin\bin\Release\
+    # 7z archive path to write
+        pathTarget: D:\TrinityCore.7z
     - name: Create a Release
       uses: actions/create-release@v1.1.4
+      env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         # The name of the tag. This should come from the webhook payload, `github.GITHUB_REF` when a user pushes a new tag
         tag_name: ${{ github.ref }}
@@ -76,6 +76,6 @@ jobs:
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
-         asset_path: D:\a\TrinityCore-NPCBOT-eluna\TrinityCore-NPCBOT-eluna\bin\bin\Release\TrinityCore.zip
-         asset_name: TrinityCore.zip
-         asset_content_type: application/zip
+         asset_path: D:\TrinityCore.7z
+         asset_name: TrinityCore.7z
+         asset_content_type: application/7z
