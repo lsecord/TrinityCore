@@ -2,6 +2,8 @@ name: GCC
 
 on:
   push:
+    tags: 
+      - 'a'
   #    #pull_request:
 
 jobs:
