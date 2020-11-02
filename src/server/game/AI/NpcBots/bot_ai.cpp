@@ -385,6 +385,85 @@ bool bot_ai::SetBotOwner(Player* newowner)
     AbortTeleport();
     return true;
 }
+//Check if should totally unlink from owner
+void bot_ai::CheckOwnerExpiry()
+{
+   if (!BotMgr::GetOwnershipExpireTime())
+       return; //disabled
+
+   NpcBotData const* npcBotData = BotDataMgr::SelectNpcBotData(me->GetEntry());
+   ASSERT(npcBotData && "bot_ai::CheckOwnerExpiry(): data not found!");
+
+   if (npcBotData->owner == 0)
+       return;
+
+   ObjectGuid ownerGuid = ObjectGuid(HighGuid::Player, 0, npcBotData->owner);
+   time_t timeNow = time(0);
+   time_t expireTime = time_t(BotMgr::GetOwnershipExpireTime());
+   uint32 accId = sCharacterCache->GetCharacterAccountIdByGuid(ownerGuid);
+   QueryResult result = accId ? LoginDatabase.PQuery("SELECT UNIX_TIMESTAMP(last_login) FROM account WHERE id = %u", accId) : NULL;
+
+   Field* fields = result ? result->Fetch() : nullptr;
+   time_t lastLoginTime = result ? time_t(fields[0].GetUInt32()) : timeNow;
+
+   //either expired or owner does not exist
+   if (timeNow >= lastLoginTime + expireTime)
+   {
+       std::string name = "unknown";
+       sCharacterCache->GetCharacterNameByGuid(ownerGuid, name);
+       TC_LOG_DEBUG("server.loading", ">> %s's (guid: %u) ownership over bot %s (%u) has expired!",
+           name.c_str(), npcBotData->owner, me->GetName().c_str(), me->GetEntry());
+
+       //send all items back
+       CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_NPCBOT_EQUIP_BY_ITEM_INSTANCE);
+       //        0            1                2      3         4        5      6             7                 8           9           10    11    12         13
+       //"SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, guid, itemEntry, owner_guid "
+       //  "FROM item_instance WHERE guid IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_SYNCH
+
+       for (uint8 i = 0; i != BOT_INVENTORY_SIZE; ++i)
+           stmt->setUInt32(i, npcBotData->equips[i]);
+
+       PreparedQueryResult iiresult = CharacterDatabase.Query(stmt);
+       if (iiresult)
+       {
+           std::vector<Item*> items;
+
+           do
+           {
+               Field* fields2 = iiresult->Fetch();
+               uint32 itemGuidLow = fields2[11].GetUInt32();
+               uint32 itemId = fields2[12].GetUInt32();
+               Item* item = new Item;
+               ASSERT(item->LoadFromDB(itemGuidLow, ObjectGuid::Empty, fields2, itemId));
+               items.push_back(item);
+
+           } while (iiresult->NextRow());
+
+           CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+           while (!items.empty())
+           {
+               static const std::string subject = "Bot ownership expired due to inactivity";
+               MailDraft draft(subject, "");
+               for (uint8 i = 0; !items.empty() && i < MAX_MAIL_ITEMS; ++i)
+               {
+                   Item* item = items.back();
+                   items.pop_back();
+                   item->SetOwnerGUID(ownerGuid);
+                   item->SaveToDB(trans);
+                   draft.AddItem(item);
+               }
+               draft.SendMailTo(trans, MailReceiver(npcBotData->owner), MailSender(me, MAIL_STATIONERY_GM));
+           }
+           CharacterDatabase.CommitTransaction(trans);
+
+           BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_EQUIPS, _equips);
+       }
+
+       //hard reset owner
+       uint32 newOwner = 0;
+       BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_OWNER, &newOwner);
+   }
+}
 
 void bot_ai::ResetBotAI(uint8 resetType)
 {
@@ -395,6 +474,8 @@ void bot_ai::ResetBotAI(uint8 resetType)
     master = reinterpret_cast<Player*>(me);
     if (resetType & BOTAI_RESET_MASK_ABANDON_MASTER)
         _ownerGuid = 0;
+    if (resetType == BOTAI_RESET_INIT)
+        CheckOwnerExpiry();
 
     (const_cast<CreatureTemplate*>(me->GetCreatureTemplate()))->unit_flags2 |= (UNIT_FLAG2_ALLOW_ENEMY_INTERACT);
     me->SetUInt32Value(UNIT_FIELD_FLAGS_2, me->GetCreatureTemplate()->unit_flags2);
@@ -10197,11 +10278,12 @@ void bot_ai::InitEquips()
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_NPCBOT_EQUIP_BY_ITEM_INSTANCE);
     //                    0                   1         2            3           4         5                6                    7              8             9        10       11            12             13
-    //SELECT ii.creatorGuid, ii.giftCreatorGuid, ii.count, ii.duration, ii.charges, ii.flags, ii.enchantments, ii.randomPropertyId, ii.durability, ii.playedTime, ii.text, ii.guid, ii.itemEntry, ii.owner_guid "
-    //  "FROM item_instance ii JOIN characters_npcbot cn ON ii.guid IN "
-    //  "(cn.equipMhEx, cn.equipOhEx, cn.equipRhEx, cn.equipHead, cn.equipShoulders, cn.equipChest, cn.equipWaist, cn.equipLegs, cn.equipFeet, cn.equipWrist, cn.equipHands, cn.equipBack, cn.equipBody, cn.equipFinger1, cn.equipFinger2, cn.equipTrinket1, cn.equipTrinket2, cn.equipNeck) "
-    //  "WHERE cn.entry = ?", CONNECTION_SYNCH
-    stmt->setUInt32(0, me->GetEntry());
+    //"SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, guid, itemEntry, owner_guid "
+    //  "FROM item_instance WHERE guid IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_SYNCH
+
+    for (uint8 i = 0; i != BOT_INVENTORY_SIZE; ++i)
+        stmt->setUInt32(i, npcBotData->equips[i]);
+
     PreparedQueryResult iiresult = CharacterDatabase.Query(stmt);
 
     Field* fields2;

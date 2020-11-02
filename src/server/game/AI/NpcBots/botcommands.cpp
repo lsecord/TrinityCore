@@ -900,9 +900,10 @@ public:
             return false;
         }
 
-        bot->GetBotAI()->canUpdate = false;
+
         bot->CombatStop();
         bot->GetBotAI()->Reset();
+        bot->GetBotAI()->canUpdate = false;
         Creature::DeleteFromDB(bot->GetSpawnId());
         bot->AddObjectToRemoveList();
 

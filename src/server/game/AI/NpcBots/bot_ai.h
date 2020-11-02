@@ -55,6 +55,7 @@ class bot_ai : public CreatureAI
         ObjectGuid::LowType GetBotOwnerGuid() const { return _ownerGuid; }
         Player* GetBotOwner() const { return master; }
         bool SetBotOwner(Player* newowner);
+        void CheckOwnerExpiry();
         uint8 GetBotClass() const { return _botclass; }
         uint32 GetLastDiff() const { return lastdiff; }
         virtual void UpdateDeadAI(uint32 /*diff*/) {}
@@ -169,6 +170,7 @@ class bot_ai : public CreatureAI
         void SetReviveTimer(uint32 newtime) { _reviveTimer = newtime; }
         void UpdateReviveTimer(uint32 diff);
 
+        bool HasSpell(uint32 basespell) const;
         uint32 GetSpellCooldown(uint32 basespell) const;
         bool IsSpellReady(uint32 basespell, uint32 diff, bool checkGCD = true) const;
         void SetSpellCooldown(uint32 basespell, uint32 msCooldown);
@@ -222,7 +224,6 @@ class bot_ai : public CreatureAI
 
         static uint32 InitSpell(Unit const* caster, uint32 spell);
         void InitSpellMap(uint32 basespell, bool forceadd = false, bool forwardRank = true);
-        bool HasSpell(uint32 basespell) const;
         uint32 GetSpell(uint32 basespell) const;
         void ResetSpellCooldown(uint32 basespell) { SetSpellCooldown(basespell, 0); }
         void RemoveSpell(uint32 basespell);

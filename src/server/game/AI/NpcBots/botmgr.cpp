@@ -34,6 +34,7 @@ uint8 _dpsTargetIconFlags;
 int32 _botInfoPacketsLimit;
 uint32 _npcBotsCost;
 uint32 _npcBotUpdateDelayBase;
+uint32 _npcBotOwnerExpireTime;
 bool _enableNpcBots;
 bool _enableNpcBotsDungeons;
 bool _enableNpcBotsRaids;
@@ -185,6 +186,7 @@ void BotMgr::LoadConfig(bool reload)
     _botInfoPacketsLimit    = sConfigMgr->GetIntDefault("NpcBot.InfoPacketsLimit", -1);
     _npcBotsCost            = sConfigMgr->GetIntDefault("NpcBot.Cost", 1000000);
     _npcBotUpdateDelayBase  = sConfigMgr->GetIntDefault("NpcBot.UpdateDelay.Base", 0);
+    _npcBotOwnerExpireTime  = sConfigMgr->GetIntDefault("NpcBot.OwnershipExpireTime", 0);
     _botPvP                 = sConfigMgr->GetBoolDefault("NpcBot.PvP", true);
     _botMovementFoodInterrupt=sConfigMgr->GetBoolDefault("NpcBot.Movements.InterruptFood", false);
     _displayEquipment       = sConfigMgr->GetBoolDefault("NpcBot.EquipmentDisplay.Enable", true);
@@ -328,6 +330,10 @@ uint8 BotMgr::GetDPSTargetIconFlags()
 uint32 BotMgr::GetBaseUpdateDelay()
 {
     return _npcBotUpdateDelayBase;
+}
+uint32 BotMgr::GetOwnershipExpireTime()
+{
+    return _npcBotOwnerExpireTime;
 }
 float BotMgr::GetBotStatLimitDodge()
 {
@@ -644,7 +650,6 @@ void BotMgr::_teleportBot(Creature* bot, Map* newMap, float x, float y, float z,
     bot->GetBotAI()->AbortTeleport();
 
     bot->GetBotAI()->KillEvents(true);
-    //bot->IsAIEnabled = false;
 
     if (bot->IsInWorld())
     {
@@ -659,6 +664,7 @@ void BotMgr::_teleportBot(Creature* bot, Map* newMap, float x, float y, float z,
 
         ////start Unit::CleanupBeforeRemoveFromMap()
         bot->InterruptNonMeleeSpells(true);
+        //bot->IsAIEnabled = false;
         if (bot->IsInWorld())
             bot->RemoveFromWorld();
 

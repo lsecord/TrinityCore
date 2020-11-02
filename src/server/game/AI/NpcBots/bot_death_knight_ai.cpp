@@ -1123,6 +1123,7 @@ public:
             //Impurity: 20% bonus (from attack power) damage for all spells
             if ((_spec == BOT_SPEC_DK_UNHOLY) && lvl >= 59)
                 if (SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(spellInfo->Id))
+                    if (bonus->ap_bonus > 0.f)
                     fdamage += bonus->ap_bonus * 0.2f * me->GetTotalAttackPowerValue(BASE_ATTACK);
             //Merciless Combat (spell): 12% bonus damage for Icy Touch, Howling Blast, Obliterate and Frost Strike on targets with less than 35% hp
             if ((_spec == BOT_SPEC_DK_FROST) && lvl >= 60 &&

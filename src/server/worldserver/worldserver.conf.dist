@@ -4504,6 +4504,16 @@ NpcBot.Stats.Limits.Crit  = 95.0
 NpcBot.InfoPacketsLimit = -1
 
 #
+#    NpcBot.OwnershipExpireTime
+#        Description: Maxmum time since last account login (in seconds) before bot ownership
+#                     is automatically cancelled (at server loading).
+#        Note:        All items will be refund and mailed back to player.
+#        Default:     0 - (Disabled)
+#                     604800 - (7 Days)
+
+NpcBot.OwnershipExpireTime = 0
+
+#
 ###################################################################################################
 #单人模式 五人副本个人属性提升5倍,10人提升10倍.. MOD已禁用
 # Solocraft.Enable = 0
