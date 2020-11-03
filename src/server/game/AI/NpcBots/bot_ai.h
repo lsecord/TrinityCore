@@ -1,4 +1,4 @@
-#ifndef _BOT_AI_H
+﻿#ifndef _BOT_AI_H
 #define _BOT_AI_H
 
 #include "CreatureAI.h"

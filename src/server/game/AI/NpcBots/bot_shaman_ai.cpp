@@ -2615,11 +2615,11 @@ public:
             switch (mhEnchant)
             {
                 //case ROCKBITER_WEAPON_1:   msg1 << "Rockbiter";  break;
-                case FLAMETONGUE_WEAPON_1: msg1 << "火舌武器";     break;
-                case FROSTBRAND_WEAPON_1:  msg1 << "冰封武器";     break;
-                case WINDFURY_WEAPON_1:    msg1 << "风怒武器";     break;
-                case EARTHLIVING_WEAPON_1: msg1 << "大地生命武器";  break;
-                default:                   msg1 << "武器没有附魔";  break;
+                case FLAMETONGUE_WEAPON_1: msg1 << "火舌武器";break;
+                case FROSTBRAND_WEAPON_1:  msg1 << "冰封武器";break;
+                case WINDFURY_WEAPON_1:    msg1 << "风怒武器";break;
+                case EARTHLIVING_WEAPON_1: msg1 << "大地生命武器";break;
+                default:                   msg1 << "武器没有附魔";break;
             }
             specList.push_back(msg1.str());
 
@@ -2628,11 +2628,11 @@ public:
             switch (ohEnchant)
             {
                 //case ROCKBITER_WEAPON_1:   msg2 << "Rockbiter";  break;
-                case FLAMETONGUE_WEAPON_1: msg2 << "火舌武器";       break;
-                case FROSTBRAND_WEAPON_1:  msg2 << "冰封武器";       break;
-                case WINDFURY_WEAPON_1:    msg2 << "风怒武器";       break;
-                case EARTHLIVING_WEAPON_1: msg2 << "大地生命武器";   break;
-                default:                   msg2 << "武器没有附魔";   break;
+                case FLAMETONGUE_WEAPON_1: msg2 << "火舌武器";break;
+                case FROSTBRAND_WEAPON_1:  msg2 << "冰封武器";break;
+                case WINDFURY_WEAPON_1:    msg2 << "风怒武器";break;
+                case EARTHLIVING_WEAPON_1: msg2 << "大地生命武器";break;
+                default:                   msg2 << "武器没有附魔";break;
             }
             specList.push_back(msg2.str());
         }

@@ -1955,13 +1955,13 @@ public:
             msg1 << "主手: ";
             switch (mhEnchant)
             {
-            case CRIPPLING_POISON_1:    msg1 << "减速药膏";        break;
-            case INSTANT_POISON_1:      msg1 << "速效药膏";       break;
-            case DEADLY_POISON_1:       msg1 << "致命药膏";        break;
-            case WOUND_POISON_1:        msg1 << "致伤药膏";         break;
-            case MIND_NUMBING_POISON_1: msg1 << "麻痹药膏";         break;
-            case ANESTHETIC_POISON_1:   msg1 << "麻醉药膏";         break;
-            default:                    msg1 << "没有涂抹毒药";       break;
+            case CRIPPLING_POISON_1:    msg1 << "减速药膏";break;
+            case INSTANT_POISON_1:      msg1 << "速效药膏";break;
+            case DEADLY_POISON_1:       msg1 << "致命药膏";break;
+            case WOUND_POISON_1:        msg1 << "致伤药膏";break;
+            case MIND_NUMBING_POISON_1: msg1 << "麻痹药膏";break;
+            case ANESTHETIC_POISON_1:   msg1 << "麻醉药膏";break;
+            default:                    msg1 << "没有涂抹毒药";break;
             }
             specList.push_back(msg1.str());
 
@@ -1969,13 +1969,13 @@ public:
             msg2 << "副手: ";
             switch (ohEnchant)
             {
-            case CRIPPLING_POISON_1:    msg2 << "减速药膏";         break;
-            case INSTANT_POISON_1:      msg2 << "速效药膏";         break;
-            case DEADLY_POISON_1:       msg2 << "致命药膏";         break;
-            case WOUND_POISON_1:        msg2 << "致伤药膏";         break;
-            case MIND_NUMBING_POISON_1: msg2 << "麻痹药膏";         break;
-            case ANESTHETIC_POISON_1:   msg2 << "麻醉药膏";          break;
-            default:                    msg2 << "没有涂抹毒药";       break;
+            case CRIPPLING_POISON_1:    msg2 << "减速药膏";break;
+            case INSTANT_POISON_1:      msg2 << "速效药膏";break;
+            case DEADLY_POISON_1:       msg2 << "致命药膏";break;
+            case WOUND_POISON_1:        msg2 << "致伤药膏";break;
+            case MIND_NUMBING_POISON_1: msg2 << "麻痹药膏";break;
+            case ANESTHETIC_POISON_1:   msg2 << "麻醉药膏";break;
+            default:                    msg2 << "没有涂抹毒药";break;
             }
             specList.push_back(msg2.str());
         }

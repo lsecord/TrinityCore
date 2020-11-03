@@ -1629,7 +1629,9 @@ public:
                 entry = myPetType;
             else if (!IAmFree())
             {
-                if (me->GetLevel() >= 30 && master->GetMaxPower(POWER_MANA) > 1 &&
+                if (me->GetLevel() >= 50 && _spec == BOT_SPEC_WARLOCK_DEMONOLOGY)
+                    entry = BOT_PET_FELGUARD;
+				else if (me->GetLevel() >= 30 && master->GetMaxPower(POWER_MANA) > 1 &&
                     !master->GetBotMgr()->HasBotClass(BOT_CLASS_MAGE) &&
                     !master->GetBotMgr()->HasBotClass(BOT_CLASS_PRIEST) &&
                     !master->GetBotMgr()->HasBotPetType(BOT_PET_FELHUNTER))
@@ -1639,8 +1641,6 @@ public:
                     entry = BOT_PET_IMP;
                 else if (me->GetLevel() >= 10 && IsTank())
                     entry = BOT_PET_VOIDWALKER;
-                else if (me->GetLevel() >= 50 && _spec == BOT_SPEC_WARLOCK_DEMONOLOGY)
-                    entry = BOT_PET_FELGUARD;
                 else if (me->GetLevel() >= 20 && !IsMeleeClass(master->GetClass()))
                     entry = BOT_PET_SUCCUBUS;
                 else if (me->GetLevel() >= 10)

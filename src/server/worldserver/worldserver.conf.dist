@@ -3849,7 +3849,7 @@ AuctionHouseBot.Buyer.Recheck.Interval = 20
 
 Eluna.Enabled = true
 Eluna.TraceBack = true
-Eluna.ScriptPath = "data/lua_scripts"
+Eluna.ScriptPath = "lua_scripts"
 
 #
 ###################################################################################################
