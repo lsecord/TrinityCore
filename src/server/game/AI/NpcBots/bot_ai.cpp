@@ -23,6 +23,8 @@ NpcBot System by Trickerer (https://github.com/trickerer/Trinity-Bots; onlysuffe
 Version 4.8.2a
 Original idea: https://bitbucket.org/lordpsyan/trinitycore-patches/src/3b8b9072280e/Individual/11185-BOTS-NPCBots.patch
 TODO:
+Bot commands to RBAC permissions
+Export strings to make them localizable
 dk pets (garg, aod, rdw)
 'Go there and do stuff' scenarios
 Encounter Scenarios
@@ -756,7 +758,7 @@ bool bot_ai::doCast(Unit* victim, uint32 spellId, TriggerCastFlags flags)
             _orders.front()->params.spellCastParams.baseSpell == m_botSpellInfo->GetFirstRankSpell()->Id)
         {
             if (DEBUG_BOT_ORDERS)
-                TC_LOG_ERROR("entities.player", "doCast(): ordered spell %s is not casted!", m_botSpellInfo->SpellName[0]);
+                TC_LOG_ERROR("entities.player", "doCast(): ordered spell %u is not casted!", m_botSpellInfo->Id);
             CancelOrder(_orders.front());
         }
 
@@ -1185,7 +1187,7 @@ void bot_ai::BuffAndHealGroup(uint32 diff)
                     if (Unit* unit = ObjectAccessor::GetUnit(*me, guid))
                     {
                         if (unit->IsAlive() && !unit->HasUnitState(UNIT_STATE_ISOLATED) && me->GetMap() == unit->FindMap() && me->GetDistance(unit) < 40 &&
-                            master->GetVictim() != unit && !IsInBotParty(unit->GetVictim()) &&
+                            !unit->IsFullHealth() && master->GetVictim() != unit && !IsInBotParty(unit->GetVictim()) &&
                             unit->GetEntry() != SHAMAN_EARTH_ELEMENTAL &&
                             !(unit->GetTypeId() == TYPEID_UNIT && unit->ToCreature()->GetCreatureTemplate()->type == CREATURE_TYPE_MECHANICAL) &&
                             unit->GetReactionTo(master) >= REP_NEUTRAL)
@@ -4512,8 +4514,8 @@ void bot_ai::SetSpellCategoryCooldown(SpellInfo const* spellInfo, uint32 msCoold
         info = sSpellMgr->GetSpellInfo(itr->second->spellId);
         if (info && itr->first == spellInfo->Id && info->GetCategory() != category)
         {
-            TC_LOG_ERROR("scripts", "Warning: SetSpellCategoryCooldown: %s (%u) has baseId %u but category %u, not %u!",
-                info->SpellName[0], info->Id, itr->first, info->GetCategory(), category);
+            TC_LOG_ERROR("scripts", "Warning: SetSpellCategoryCooldown: %u has baseId %u but category %u, not %u!",
+                info->Id, itr->first, info->GetCategory(), category);
         }
         if (info && (info->GetCategory() == category || itr->first == spellInfo->Id) && itr->second->cooldown < msCooldown)
             itr->second->cooldown = msCooldown;
@@ -5731,7 +5733,9 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 SpellInfo const* availableInfo = sSpellMgr->GetSpellInfo(possiblePoisonMaxRank);
                                 uint32 curMHId = GetAIMiscValue(BOTAI_MISC_ENCHANT_CURRENT_MH);
                                 bool same = possiblePoison == curMHId;
-                                AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, availableInfo->SpellName[0], GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + possiblePoison);
+                                std::string spellName;
+                                _LocalizeSpell(player, spellName, availableInfo->Id);
+                                AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, spellName, GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + possiblePoison);
                             }
                         }
                         AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + 0);
@@ -5750,7 +5754,9 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 SpellInfo const* availableInfo = sSpellMgr->GetSpellInfo(possiblePoisonMaxRank);
                                 uint32 curOHId = GetAIMiscValue(BOTAI_MISC_ENCHANT_CURRENT_OH);
                                 bool same = possiblePoison == curOHId;
-                                AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, availableInfo->SpellName[0], GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + possiblePoison);
+                                std::string spellName;
+                                _LocalizeSpell(player, spellName, availableInfo->Id);
+                                AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, spellName, GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + possiblePoison);
                             }
                         }
                         AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + 0);
@@ -5781,7 +5787,9 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 SpellInfo const* availableInfo = sSpellMgr->GetSpellInfo(possibleEcnhantMaxRank);
                                 uint32 curMHId = GetAIMiscValue(BOTAI_MISC_ENCHANT_CURRENT_MH);
                                 bool same = possibleEnchant == curMHId;
-                                AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, availableInfo->SpellName[0], GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + possibleEnchant);
+                                std::string spellName;
+                                _LocalizeSpell(player, spellName, availableInfo->Id);
+                                AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, spellName, GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + possibleEnchant);
                             }
                         }
                         AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + 0);
@@ -5800,7 +5808,9 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 SpellInfo const* availableInfo = sSpellMgr->GetSpellInfo(possibleEcnhantMaxRank);
                                 uint32 curOHId = GetAIMiscValue(BOTAI_MISC_ENCHANT_CURRENT_OH);
                                 bool same = possibleEnchant == curOHId;
-                                AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, availableInfo->SpellName[0], GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + possibleEnchant);
+                                std::string spellName;
+                                _LocalizeSpell(player, spellName, availableInfo->Id);
+                                AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, spellName, GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + possibleEnchant);
                             }
                         }
                         AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + 0);
@@ -10752,6 +10762,20 @@ void bot_ai::_LocalizeGameObject(Player const* forPlayer, std::string &gameobjec
     }
 }
 
+void bot_ai::_LocalizeSpell(Player const* forPlayer, std::string &spellName, uint32 entry) const
+{
+    uint32 loc = forPlayer->GetSession()->GetSessionDbLocaleIndex();
+    std::wstring wnamepart;
+
+    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(entry);
+    if (!spellInfo)
+        return;
+
+    std::string title = spellInfo->SpellName[loc];
+    if (Utf8FitTo(title, wnamepart))
+        spellName = title;
+}
+
 void bot_ai::BotJump(Position const* pos)
 {
     ++_jumpCount;
@@ -10955,8 +10979,8 @@ void bot_ai::OnBotSpellGo(Spell const* spell)
         _orders.front()->params.spellCastParams.baseSpell == curInfo->GetFirstRankSpell()->Id)
     {
         if (DEBUG_BOT_ORDERS)
-            TC_LOG_ERROR("entities.player", "doCast(): ordered spell %s by %s was successful!",
-                curInfo->SpellName[0], me->GetName().c_str());
+            TC_LOG_ERROR("entities.player", "doCast(): ordered spell %u by %s was successful!",
+                curInfo->Id, me->GetName().c_str());
         CompleteOrder(_orders.front());
     }
 }
@@ -10977,7 +11001,7 @@ void bot_ai::OnBotSpellInterrupted(SpellSchoolMask schoolMask, uint32 unTimeMs)
             _orders.front()->params.spellCastParams.baseSpell == itr->first)
         {
             if (DEBUG_BOT_ORDERS)
-                TC_LOG_ERROR("entities.player", "doCast(): ordered spell %s was interrupted!", info->SpellName[0]);
+                TC_LOG_ERROR("entities.player", "doCast(): ordered spell %u was interrupted!", info->Id);
             CompleteOrder(_orders.front());
         }
 

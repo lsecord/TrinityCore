@@ -1238,7 +1238,7 @@ public:
                 return false;
             uint8 hp = GetHealthPCT(target);
 			bool pointed = IsPointedHealTarget(target);
-            if (hp > 95 && !pointed &&
+            if (hp > 95 && !(pointed && me->GetMap()->IsRaid()) &&
                 (!target->IsInCombat() || target->getAttackers().empty() || !IsTank(target) || !me->GetMap()->IsRaid()))
                 return false;
 

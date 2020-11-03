@@ -897,7 +897,7 @@ public:
                 return false;
             uint8 hp = GetHealthPCT(target);
 			bool pointed = IsPointedHealTarget(target);
-            if (hp > 90 && !pointed &&
+            if (hp > 90 && !(pointed && me->GetMap()->IsRaid()) &&
                 (!target->IsInCombat() || target->getAttackers().empty() || !IsTank(target) || !me->GetMap()->IsRaid()))
                 return false;
             //try to preserve heal if Divine Plea is active

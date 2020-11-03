@@ -1725,8 +1725,8 @@ void bot_pet_ai::SetSpellCategoryCooldown(SpellInfo const* spellInfo, uint32 msC
         info = sSpellMgr->GetSpellInfo(itr->second->spellId);
         if (info && itr->first == spellInfo->Id && info->GetCategory() != category)
         {
-            TC_LOG_ERROR("scripts", "Warning: SetSpellCategoryCooldown: %s (%u) has baseId %u but category %u, not %u!",
-                info->SpellName[0], info->Id, itr->first, info->GetCategory(), category);
+            TC_LOG_ERROR("scripts", "Warning: SetSpellCategoryCooldown: %u has baseId %u but category %u, not %u!",
+                info->Id, itr->first, info->GetCategory(), category);
         }
 
         if (info && (info->GetCategory() == category || itr->first == spellInfo->Id) && itr->second->cooldown < msCooldown)

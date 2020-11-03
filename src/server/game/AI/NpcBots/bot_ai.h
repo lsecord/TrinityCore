@@ -442,7 +442,8 @@ class bot_ai : public CreatureAI
         void _LocalizeItem(Player const* forPlayer, std::string &itemName, std::string &suffix, Item const* item) const;
         void _LocalizeQuest(Player const* forPlayer, std::string &questTitle, uint32 entry) const;
         void _LocalizeCreature(Player const* forPlayer, std::string &creatureName, uint32 entry) const;
-        void _LocalizeGameObject(Player const* forPlayer, std::string &gameobjectName, uint32 entry) const;
+        void _LocalizeSpell(Player const* forPlayer, std::string &spellName, uint32 entry) const;
+		void _LocalizeGameObject(Player const* forPlayer, std::string &gameobjectName, uint32 entry) const;
 
         float _getBotStat(uint8 slot, uint8 stat) const;
         float _getTotalBotStat(uint8 stat) const;

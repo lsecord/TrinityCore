@@ -1627,11 +1627,12 @@ public:
 
             if (myPetType)
                 entry = myPetType;
+            else if (me->GetLevel() >= 50 && _spec == BOT_SPEC_WARLOCK_DEMONOLOGY)
+                entry = BOT_PET_FELGUARD;
             else if (!IAmFree())
             {
-                if (me->GetLevel() >= 50 && _spec == BOT_SPEC_WARLOCK_DEMONOLOGY)
-                    entry = BOT_PET_FELGUARD;
-				else if (me->GetLevel() >= 30 && master->GetMaxPower(POWER_MANA) > 1 &&
+                
+				if (me->GetLevel() >= 30 && master->GetMaxPower(POWER_MANA) > 1 &&
                     !master->GetBotMgr()->HasBotClass(BOT_CLASS_MAGE) &&
                     !master->GetBotMgr()->HasBotClass(BOT_CLASS_PRIEST) &&
                     !master->GetBotMgr()->HasBotPetType(BOT_PET_FELHUNTER))
