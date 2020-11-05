@@ -25,3 +25,4 @@ cmake-build-*/
 *.user
 src/server/game/LuaEngine/
 *.zip
+*.7z

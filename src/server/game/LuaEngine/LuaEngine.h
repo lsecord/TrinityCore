@@ -343,7 +343,7 @@ public:
 
     /* Custom */
     void OnTimedEvent(int funcRef, uint32 delay, uint32 calls, WorldObject* obj);
-    bool OnCommand(Player* player, std::string_view text);//bool OnCommand(Player* player, const char* text);
+    bool OnCommand(Player* player, const char* text);
     void OnWorldUpdate(uint32 diff);
     void OnLootItem(Player* pPlayer, Item* pItem, uint32 count, uint64 guid);
     void OnLootMoney(Player* pPlayer, uint32 amount);
