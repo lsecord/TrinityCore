@@ -25,6 +25,10 @@
 #include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
+ 
+//npcbot
+#include "botmgr.h"
+//end npcbot
 
 TempSummon::TempSummon(SummonPropertiesEntry const* properties, WorldObject* owner, bool isWorldObject) :
 Creature(isWorldObject), m_Properties(properties), m_type(TEMPSUMMON_MANUAL_DESPAWN),
@@ -198,15 +202,10 @@ void TempSummon::InitStats(uint32 duration)
 
     //npcbot: skip deleting/reassigning player totems
     //normally no creatorGUID is assigned at this point, perform full check anyway for compatibilty reasons
-    bool botTotemCast = false;
-    if (owner && m_Properties->Slot && m_Properties->Slot >= SUMMON_SLOT_TOTEM_FIRE && m_Properties->Slot < MAX_TOTEM_SLOT &&
-        GetCreatorGUID() && GetCreatorGUID().IsCreature())
-    {
-        Creature* bot = ObjectAccessor::GetCreature(*owner, GetCreatorGUID());
-        if (bot && bot->IsNPCBot())
-            botTotemCast = true;
-    }
-    if (!botTotemCast)
+							   
+    if (!(m_Properties->Slot && m_Properties->Slot >= SUMMON_SLOT_TOTEM_FIRE && m_Properties->Slot < MAX_TOTEM_SLOT &&
+        GetCreatorGUID() && GetCreatorGUID().IsCreature() && owner && owner->GetTypeId() == TYPEID_PLAYER &&
+        owner->ToPlayer()->HaveBot() && owner->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID())))
     //end npcbot
     if (owner)
     {

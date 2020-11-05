@@ -998,37 +998,14 @@ public:
 
         NpcBotExtras const* _botExtras = BotDataMgr::SelectNpcBotExtras(id);
 
-        uint16 roleMask = BOT_ROLE_DPS;
+        if (!_botExtras)
+       {
+            handler->PSendSysMessage("找不到npcbot %u 的职业/种族数据!", id);
+            handler->SetSentErrorMessage(true);
+            return false;
+       }
 
-        uint8 m_class = _botExtras ? _botExtras->bclass : uint8(CLASS_WARRIOR);
-        if (!bot_ai::IsMeleeClass(m_class))
-            roleMask |= BOT_ROLE_RANGED;
-        if (bot_ai::IsHealingClass(m_class))
-            roleMask |= BOT_ROLE_HEAL;
-
-        uint8 spec = urand(1,3);
-        switch (m_class)
-        {
-            case BOT_CLASS_WARRIOR:
-            case BOT_CLASS_PALADIN:
-            case BOT_CLASS_HUNTER:
-            case BOT_CLASS_ROGUE:
-            case BOT_CLASS_PRIEST:
-            case BOT_CLASS_DEATH_KNIGHT:
-            case BOT_CLASS_SHAMAN:
-            case BOT_CLASS_MAGE:
-            case BOT_CLASS_WARLOCK:
-                spec += (m_class-1) * 3;
-                break;
-            case BOT_CLASS_DRUID:
-                spec += (m_class-2) * 3;
-                break;
-            default:
-                spec = uint8(BOT_SPEC_DEFAULT);
-                break;
-        }
-
-        BotDataMgr::AddNpcBotData(id, roleMask, spec, creature->GetCreatureTemplate()->faction);
+        BotDataMgr::AddNpcBotData(id, bot_ai::DefaultRolesForClass(_botExtras->bclass), bot_ai::DefaultSpecForClass(_botExtras->bclass), creature->GetCreatureTemplate()->faction);
 
         creature->SaveToDB(map->GetId(), (1 << map->GetSpawnMode()), chr->GetPhaseMaskForSpawn());
 

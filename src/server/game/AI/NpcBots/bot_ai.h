@@ -91,6 +91,7 @@ class bot_ai : public CreatureAI
         bool HasRole(uint16 role) const { return _roleMask & role; }
         uint8 GetRoleIcon(uint16 role) const;
         char const* GetRoleString(uint16 role) const;
+		static uint16 DefaultRolesForClass(uint8 m_class);
         void ToggleRole(uint16 role, bool force);
         bool IsTank(Unit const* unit = nullptr) const;
         bool IAmFree() const;
@@ -183,6 +184,7 @@ class bot_ai : public CreatureAI
         void ReinitOwner() { InitOwner(); }
         void SetSpec(uint8 spec, bool activate = true);
         uint8 GetSpec() const { return _spec; }
+		static uint8 DefaultSpecForClass(uint8 m_class);
 
         static bool IsMeleeClass(uint8 m_class);
         static bool IsTankingClass(uint8 m_class);

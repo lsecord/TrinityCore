@@ -396,6 +396,9 @@ void bot_ai::CheckOwnerExpiry()
    NpcBotData const* npcBotData = BotDataMgr::SelectNpcBotData(me->GetEntry());
    ASSERT(npcBotData && "bot_ai::CheckOwnerExpiry(): data not found!");
 
+   NpcBotExtras const* npcBotExtra = BotDataMgr::SelectNpcBotExtras(me->GetEntry());
+   ASSERT(npcBotExtra && "bot_ai::CheckOwnerExpiry(): extra data not found!");
+
    if (npcBotData->owner == 0)
        return;
 
@@ -464,6 +467,12 @@ void bot_ai::CheckOwnerExpiry()
        //hard reset owner
        uint32 newOwner = 0;
        BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_OWNER, &newOwner);
+       //...roles
+       uint16 roleMask = DefaultRolesForClass(npcBotExtra->bclass);
+       BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_ROLES, &roleMask);
+       //...and spec
+       uint8 spec = DefaultSpecForClass(npcBotExtra->bclass);
+       BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_SPEC, &spec);
    }
 }
 
@@ -9937,6 +9946,18 @@ void bot_ai::ToggleRole(uint16 role, bool force)
     shouldUpdateStats = true;
 }
 
+uint16 bot_ai::DefaultRolesForClass(uint8 m_class)
+{
+    uint16 roleMask = BOT_ROLE_DPS;
+
+    if (!bot_ai::IsMeleeClass(m_class))
+        roleMask |= BOT_ROLE_RANGED;
+    if (bot_ai::IsHealingClass(m_class))
+        roleMask |= BOT_ROLE_HEAL;
+
+    return roleMask;
+}
+
 bool bot_ai::IsTank(Unit const* unit) const
 {
     if (!unit || unit == me)
@@ -10275,6 +10296,33 @@ void bot_ai::SetSpec(uint8 spec, bool activate)
         me->SetPower(POWER_RAGE, 0);
         me->SetPower(POWER_ENERGY, 0);
     }
+}
+
+uint8 bot_ai::DefaultSpecForClass(uint8 m_class)
+{
+    uint8 spec = urand(1,3);
+    switch (m_class)
+    {
+        case BOT_CLASS_WARRIOR:
+        case BOT_CLASS_PALADIN:
+        case BOT_CLASS_HUNTER:
+        case BOT_CLASS_ROGUE:
+        case BOT_CLASS_PRIEST:
+        case BOT_CLASS_DEATH_KNIGHT:
+        case BOT_CLASS_SHAMAN:
+        case BOT_CLASS_MAGE:
+        case BOT_CLASS_WARLOCK:
+            spec += (m_class-1) * 3;
+            break;
+        case BOT_CLASS_DRUID:
+            spec += (m_class-2) * 3;
+            break;
+        default:
+            spec = uint8(BOT_SPEC_DEFAULT);
+            break;
+    }
+
+    return spec;
 }
 
 void bot_ai::InitEquips()

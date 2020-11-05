@@ -2285,8 +2285,10 @@ public:
             //Without setting creator correctly it will be impossible to use summon X elemental totems
             summon->SetCreatorGUID(me->GetGUID());
             summon->SetDisplayId(sObjectMgr->GetModelForTotem(SummonSlot(slot+1), Races(me->GetRace())));
+            summon->SetFaction(me->GetFaction());
             summon->SetPvP(me->IsPvP());
-            summon->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+            summon->SetOwnerGUID(master->GetGUID());
+            summon->SetControlledByPlayer(!IAmFree());
             // totem will claim master's summon slot
             // free it to avoid conflicts with other shaman bots and master
             // if master is a shaman his totem will despawn
