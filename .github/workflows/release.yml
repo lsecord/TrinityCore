@@ -2,7 +2,7 @@ name: changelog
 on:
   push:
    tags: 
-     - 'v*'
+     - 'a*'
 jobs:
   Release:
     runs-on: ubuntu-latest

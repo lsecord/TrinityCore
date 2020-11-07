@@ -5,7 +5,7 @@ on:
     #  - created
   push:
   # tags: 
-   #  - 'v*'
+   #  - 'a*'
   pull_request:
 jobs:
   build:
@@ -62,7 +62,7 @@ jobs:
       # file/folder path to compress
         pathSource: D:\a\TrinityCore-NPCBOT-Eluna-zhCN\TrinityCore-NPCBOT-Eluna-zhCN\bin\bin\Release\
     # 7z archive path to write
-        pathTarget: D:\TrinityCore-NPCBOT-Eluna-zhCN.7z
+        pathTarget: D:\TrinityCore-NPCBOT-Eluna-zhCN_win64.7z
     - name: Create a Release
       id: create_release
       uses: actions/create-release@v1.1.4
@@ -94,6 +94,6 @@ jobs:
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
          upload_url: ${{ steps.create_release.outputs.upload_url }}
-         asset_path: D:\TrinityCore-NPCBOT-Eluna-zhCN.7z
-         asset_name: TrinityCore-NPCBOT-Eluna-zhCN.7z
+         asset_path: D:\TrinityCore-NPCBOT-Eluna-zhCN_win64.7z
+         asset_name: TrinityCore-NPCBOT-Eluna-zhCN_win64.7z
          asset_content_type: application/7z

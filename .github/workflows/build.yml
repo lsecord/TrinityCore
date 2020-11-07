@@ -1,0 +1,160 @@
+name: build
+on:
+ # release:
+  #  types:
+    #  - created
+ push:
+   tags: 
+      - 'v*'
+  # pull_request:
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      get_version: ${{ steps.get_version.outputs.version }}
+    name: Create release
+    steps:
+    - name: Get Version
+      id: get_version
+      uses: battila7/get-version-action@v2
+    - run: echo ${{ steps.get_version.outputs.version }}
+    - run: echo ${{ steps.get_version.outputs.version-without-v }}
+      env: 
+       get_version: ${{ steps.get_version.outputs.version }}
+    - name: Get current time
+      uses: srfrnk/current-time@master
+      id: current-time
+      with: 
+        format: YYMMDD
+    - name: Use current time
+      env:
+        TIME: "${{ steps.current-time.outputs.time }}"
+        F_TIME: "${{ steps.current-time.outputs.formattedTime }}"
+      run: |
+       echo $TIME
+       echo ${{ github.ref }}
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1.1.4
+      env:
+         upload_url: ${{ steps.create_release.outputs.upload_url }}
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+       tag_name: ${{ steps.get_version.outputs.version }}
+       release_name: TrinityCore-NPCBOT-Eluna-zhCN_${{ steps.get_version.outputs.version }}
+       #body: |
+              ${{ steps.Changelog.outputs.changelog }}                                            
+
+    #- uses: notlmn/release-with-changelog@v3
+    #- uses: MorsiC/changelog-release-by-branch@v4.5
+    #  with:
+     #   tag: ${{ steps.get_version.outputs.version }}
+      #  token: ${{ secrets.GITHUB_TOKEN }}
+
+    
+    #- name: Upload upload_url.txt
+    #  uses: actions/upload-artifact@v2
+     # with:
+     #     name: upload_url
+     #     path: ./upload_url.txt
+  
+  build-windows:
+    needs: [create_release]
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: setup-msbuild
+      uses: microsoft/setup-msbuild@v1
+    - name: add lib
+      run: |
+         vcpkg update
+         vcpkg integrate install
+         vcpkg install openssl:x64-windows
+         Get-ChildItem C:\vcpkg\installed\x64-windows\bin
+         Get-ChildItem C:\vcpkg\installed\x64-windows\lib
+    - name: Setup
+      run: |
+        chcp 65001
+        #cmd
+        set BOOST_ROOT=%BOOST_ROOT_1_72_0%
+        $powershell
+        echo ${{ github.repository }}
+        $env:BOOST_ROOT=$env:BOOST_ROOT_1_72_0
+        mkdir bin
+        cd bin
+        cmake ../ -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DOPENSSL_ROOT_DIR:PATH="C:\vcpkg\installed\x64-windows" -DLIB_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="C:\vcpkg\installed\x64-windows\include" -DSSL_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" 
+        cmake --build . --config Release
+        Copy-Item C:\mysql-5.7.21-winx64\lib\libmysql.dll -Destination .\bin\Release\
+        Copy-Item C:\mysql-5.7.21-winx64\bin\mysql.exe -Destination .\bin\Release\
+        echo $GITHUB_WORKSPACE
+    #- name: Check executables
+      #run: |
+      #  cd D:\a\TrinityCore-NPCBOT-Eluna-zhCN\TrinityCore-NPCBOT-Eluna-zhCN\bin\bin\Release\
+      #  authserver.exe --version
+       # worldserver.exe --version
+    - name: 7zip pack
+      uses: DuckSoft/create-7z-action@v1.0
+      with:
+      # file/folder path to compress
+        pathSource: D:\a\TrinityCore\TrinityCore\bin\bin\
+    # 7z archive path to write
+        pathTarget: \TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win64.7z
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+         upload_url: ${{ needs.create_release.outputs.upload_url }}
+         asset_path: \TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win64.7z
+         asset_name: TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win64.7z
+         asset_content_type: application/7z
+
+      
+  build-linux:
+    needs: [create_release]
+    runs-on: ubuntu-20.04
+    steps:
+    - run: echo ${{ needs.create_release.outputs.upload_url }}
+    - run: echo ${{ needs.create_release.outputs.get_version }}
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: |
+        sudo apt-get update && sudo apt-get install -yq libboost-all-dev
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 100 --slave /usr/bin/g++ g++ /usr/bin/g++-8
+    - name: Setup
+      run: |
+        mkdir bin
+        cd bin
+        cmake ../ -DWITH_WARNINGS=0 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DELUNA:BOOL="1" -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-fpermissive -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=0
+        cd ..
+    - name: Build
+      run: |
+        cd bin
+        make -j 4 -k && make install
+    - name: Check executables
+      run: |
+        cd bin/check_install/bin
+        ./authserver --version
+        ./worldserver --version
+        cd ../..
+    - name: 7zip pack
+      uses: DuckSoft/create-7z-action@v1.0
+      with:
+      # file/folder path to compress
+        pathSource: ./bin/check_install
+    # 7z archive path to write
+        pathTarget: ./TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_linux.7z
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+         upload_url: ${{ needs.create_release.outputs.upload_url }}
+         asset_path: ./TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_linux.7z
+         asset_name: TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_linux.7z
+         asset_content_type: application/7z

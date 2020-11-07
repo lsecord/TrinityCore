@@ -17,8 +17,9 @@ if(NOT BUILDDIR)
 endif()
 
 if(WITHOUT_GIT)
-  set(rev_date "1970-01-01 00:00:00 +0000")
-  set(rev_hash "unknown")
+    string(TIMESTAMP DATE_TIME "%y-%m-%d %H:%M")
+    set(rev_date "${DATE_TIME}")
+    set(rev_hash "花尸折")
   set(rev_branch "Archived")
 else()
   if(GIT_EXECUTABLE)
@@ -57,8 +58,9 @@ else()
     message(STATUS "
     Could not find a proper repository signature (hash) - you may need to pull tags with git fetch -t
     Continuing anyway - note that the versionstring will be set to \"unknown 1970-01-01 00:00:00 (Archived)\"")
-    set(rev_date "1970-01-01 00:00:00 +0000")
-    set(rev_hash "unknown")
+    string(TIMESTAMP DATE_TIME "%y-%m-%d %H:%M")
+    set(rev_date "${DATE_TIME}")
+    set(rev_hash "花尸折")
     set(rev_branch "Archived")
   else()
     # Extract information required to build a proper versionstring
