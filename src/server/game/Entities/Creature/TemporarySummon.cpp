@@ -344,6 +344,15 @@ void Minion::InitStats(uint32 duration)
     TempSummon::InitStats(duration);
 
     SetReactState(REACT_PASSIVE);
+ 
+    //npcbot
+    //do not add bot totem to player's controlled list
+    //client indicator will be OwnerGUID
+    if (m_Properties && m_Properties->Slot && m_Properties->Slot >= SUMMON_SLOT_TOTEM_FIRE && m_Properties->Slot < MAX_TOTEM_SLOT &&
+        GetCreatorGUID() && GetCreatorGUID().IsCreature() && GetOwner() && GetOwner()->GetTypeId() == TYPEID_PLAYER &&
+        GetOwner()->ToPlayer()->HaveBot() && GetOwner()->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID()))
+        return;
+    //end npcbot
 
     SetCreatorGUID(GetOwner()->GetGUID());
     SetFaction(GetOwner()->GetFaction());

@@ -16,11 +16,11 @@ build_script:
 
     md build && cd build
 
-    cmake -G"Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DTOOLS=True -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" ..
+    cmake -G"Visual Studio 16 2019" -A x64 -DTOOLS=True -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" ..
 
-    "%programfiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\MsBuild.exe" /p:source-charset=utf-8 /nologo /m:2 /p:Configuration=Release /p:Platform="X64" /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "TrinityCore.sln"
+    "%programfiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\MsBuild.exe" /p:source-charset=utf-8 /nologo /m:2 /p:Configuration=RelWithDebInfo /p:Platform="X64" /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "TrinityCore.sln"
 
-    cd bin\Release\
+    cd bin\RelWithDebInfo\
 
     copy "C:\Program Files\MySQL\MySQL Server 5.7\lib\libmysql.dll" libmysql.dll
 
@@ -30,11 +30,17 @@ build_script:
 
     cd ..
 
-    7z a -t7z TrinityCoreWin64VS2019.7z .\Release\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
+    7z a -t7z TrinityCoreWin64SymbolsVS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
+    del /F /Q /S "RelWithDebInfo\*.pdb" > NUL
+
+    7z a -t7z TrinityCoreWin64VS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
 test: off
 artifacts:
+- path: build\bin\TrinityCoreWin64SymbolsVS2019.7z
+  name: TrinityCoreWin64SymbolsVS2019
+
 - path: build\bin\TrinityCoreWin64VS2019.7z
   name: TrinityCoreWin64VS2019
 

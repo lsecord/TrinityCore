@@ -2088,8 +2088,7 @@ public:
                 if (!found)
                 {
                     TC_LOG_ERROR("entities.unit", "Shaman_bot:JustSummoned() wolves array is full");
-                    //ASSERT(false);
-					found = true;
+                    ASSERT(false);
                 }
             }
         }
@@ -2289,6 +2288,7 @@ public:
             summon->SetPvP(me->IsPvP());
             summon->SetOwnerGUID(master->GetGUID());
             summon->SetControlledByPlayer(!IAmFree());
+			summon->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);														   
             // totem will claim master's summon slot
             // free it to avoid conflicts with other shaman bots and master
             // if master is a shaman his totem will despawn
