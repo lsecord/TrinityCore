@@ -1,4 +1,4 @@
-name: build
+name: win64/linux
 on:
  # release:
   #  types:
@@ -44,7 +44,7 @@ jobs:
       with:
        tag_name: ${{ steps.get_version.outputs.version }}
        release_name: TrinityCore-NPCBOT-Eluna-zhCN_${{ steps.get_version.outputs.version }}
-       #body: |
+       body: |
               ${{ steps.Changelog.outputs.changelog }}                                            
 
     #- uses: notlmn/release-with-changelog@v3
@@ -99,7 +99,7 @@ jobs:
       uses: DuckSoft/create-7z-action@v1.0
       with:
       # file/folder path to compress
-        pathSource: D:\a\TrinityCore\TrinityCore\bin\bin\
+        pathSource: D:\a\TrinityCore-NPCBOT-Eluna-zhCN\TrinityCore-NPCBOT-Eluna-zhCN\bin\bin\
     # 7z archive path to write
         pathTarget: \TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win64.7z
     - name: Upload Release Asset

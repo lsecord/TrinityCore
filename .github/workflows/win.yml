@@ -4,9 +4,9 @@ on:
  #   types:
     #  - created
   push:
-  # tags: 
-   #  - 'a*'
-  pull_request:
+   tags: 
+     - 'a*'
+  #pull_request:
 jobs:
   build:
     runs-on: windows-latest
