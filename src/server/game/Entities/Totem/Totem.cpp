@@ -31,7 +31,14 @@
 
 Totem::Totem(SummonPropertiesEntry const* properties, Unit* owner) : Minion(properties, owner, false)
 {
-    //npcbot: do not despawn bot totem if master is dead
+    m_unitTypeMask |= UNIT_MASK_TOTEM;
+    m_duration = 0;
+    m_type = TOTEM_PASSIVE;
+}
+
+void Totem::Update(uint32 time)
+{
+	//npcbot: do not despawn bot totem if master is dead
     Creature const* botOwner = (GetOwner()->GetTypeId() == TYPEID_PLAYER && GetOwner()->ToPlayer()->HaveBot()) ?
         GetOwner()->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID()) : NULL;
 
@@ -45,13 +52,6 @@ Totem::Totem(SummonPropertiesEntry const* properties, Unit* owner) : Minion(prop
     }
     else
     //end npcbot
-    m_unitTypeMask |= UNIT_MASK_TOTEM;
-    m_duration = 0;
-    m_type = TOTEM_PASSIVE;
-}
-
-void Totem::Update(uint32 time)
-{
     if (!GetOwner()->IsAlive() || !IsAlive())
     {
         UnSummon();                                         // remove self
