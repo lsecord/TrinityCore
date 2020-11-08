@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botmgr.h"
 #include "Group.h"
 #include "Item.h"
@@ -1336,7 +1336,7 @@ public:
                     itemSlot = BOT_SLOT_OFFHAND;
                 }
                 else
-                    ASSERT(false && "潜行者仆从试图给他的武器涂毒，但找不到可以使用的武器!");
+                    ASSERT(false && "rogue bot attempted to enchant his weapons but cannot find a weapon to apply it!");
 
                 if (!IAmFree())
                     master->GetSession()->SendEnchantmentLog(me->GetGUID(), me->GetGUID(), item->GetEntry(), enchant_id);
@@ -1949,35 +1949,31 @@ public:
         }
 
         bool HasAbilitiesSpecifics() const override { return true; }
-        void FillAbilitiesSpecifics(std::list<std::string> &specList) override
+        void FillAbilitiesSpecifics(Player const* player, std::list<std::string> &specList) override
         {
-            std::ostringstream msg1;
-            msg1 << "主手: ";
+            uint32 textId1, textId2;
             switch (mhEnchant)
             {
-            case CRIPPLING_POISON_1:    msg1 << "减速药膏";break;
-            case INSTANT_POISON_1:      msg1 << "速效药膏";break;
-            case DEADLY_POISON_1:       msg1 << "致命药膏";break;
-            case WOUND_POISON_1:        msg1 << "致伤药膏";break;
-            case MIND_NUMBING_POISON_1: msg1 << "麻痹药膏";break;
-            case ANESTHETIC_POISON_1:   msg1 << "麻醉药膏";break;
-            default:                    msg1 << "没有涂抹毒药";break;
+                case CRIPPLING_POISON_1:    textId1 = BOT_TEXT_CRIPPLING;   break;
+                case INSTANT_POISON_1:      textId1 = BOT_TEXT_INSTANT;     break;
+                case DEADLY_POISON_1:       textId1 = BOT_TEXT_DEADLY;      break;
+                case WOUND_POISON_1:        textId1 = BOT_TEXT_WOUND;       break;
+                case MIND_NUMBING_POISON_1: textId1 = BOT_TEXT_MINDNUMBING; break;
+                case ANESTHETIC_POISON_1:   textId1 = BOT_TEXT_ANESTHETIC;  break;
+                default:                    textId1 = BOT_TEXT_NOTHING_C;   break;
             }
-            specList.push_back(msg1.str());
-
-            std::ostringstream msg2;
-            msg2 << "副手: ";
             switch (ohEnchant)
             {
-            case CRIPPLING_POISON_1:    msg2 << "减速药膏";break;
-            case INSTANT_POISON_1:      msg2 << "速效药膏";break;
-            case DEADLY_POISON_1:       msg2 << "致命药膏";break;
-            case WOUND_POISON_1:        msg2 << "致伤药膏";break;
-            case MIND_NUMBING_POISON_1: msg2 << "麻痹药膏";break;
-            case ANESTHETIC_POISON_1:   msg2 << "麻醉药膏";break;
-            default:                    msg2 << "没有涂抹毒药";break;
+                case CRIPPLING_POISON_1:    textId2 = BOT_TEXT_CRIPPLING;   break;
+                case INSTANT_POISON_1:      textId2 = BOT_TEXT_INSTANT;     break;
+                case DEADLY_POISON_1:       textId2 = BOT_TEXT_DEADLY;      break;
+                case WOUND_POISON_1:        textId2 = BOT_TEXT_WOUND;       break;
+                case MIND_NUMBING_POISON_1: textId2 = BOT_TEXT_MINDNUMBING; break;
+                case ANESTHETIC_POISON_1:   textId2 = BOT_TEXT_ANESTHETIC;  break;
+                default:                    textId2 = BOT_TEXT_NOTHING_C;   break;
             }
-            specList.push_back(msg2.str());
+            specList.push_back(LocalizedNpcText(player, BOT_TEXT_SLOT_MH) + ": " + LocalizedNpcText(player, textId1));
+            specList.push_back(LocalizedNpcText(player, BOT_TEXT_SLOT_OH) + ": " + LocalizedNpcText(player, textId2));
         }
 
         std::vector<uint32> const* GetDamagingSpellsList() const

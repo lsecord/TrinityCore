@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botmgr.h"
 #include "Group.h"
 #include "Map.h"
@@ -677,7 +677,8 @@ public:
                 (_form == DRUID_BEAR_FORM || (GC_Timer <= diff && doCast(me, GetSpell(BEAR_FORM_1)))))
             {
                 if (doCast(me, SURVIVAL_INSTINCTS_1))
-                    BotWhisper("老子已使用 生存本能,奶妈看好我血!");
+                    if (!IAmFree())
+                        ReportSpellCast(SURVIVAL_INSTINCTS_1, LocalizedNpcText(master, BOT_TEXT__USED), master);
             }
             //Bash
             //Assuming Furor is present which is lvl 10
@@ -1237,7 +1238,7 @@ public:
             if (!target || !target->IsAlive() || target->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION || me->GetDistance(target) > 40)
                 return false;
             uint8 hp = GetHealthPCT(target);
-			bool pointed = IsPointedHealTarget(target);
+            bool pointed = IsPointedHealTarget(target);
             if (hp > 95 && !(pointed && me->GetMap()->IsRaid()) &&
                 (!target->IsInCombat() || target->getAttackers().empty() || !IsTank(target) || !me->GetMap()->IsRaid()))
                 return false;
@@ -1485,12 +1486,12 @@ public:
             if (iTarget && doCast(iTarget, INNERVATE_1))
             {
                 if (iTarget->GetTypeId() == TYPEID_PLAYER)
-                    BotWhisper("激活 on You!", iTarget->ToPlayer());
-                if (iTarget != master)
+                    ReportSpellCast(INNERVATE_1, LocalizedNpcText(iTarget->ToPlayer(), BOT_TEXT__ON_YOU), iTarget->ToPlayer());
+
+                if (!IAmFree() && iTarget != master)
                 {
-                    std::ostringstream msg;
-                    msg << "激活 on " << (iTarget == me ? "myself" : iTarget->GetName()) << '!';
-                    BotWhisper(msg.str().c_str());
+                    std::string msg = iTarget == me ? LocalizedNpcText(master, BOT_TEXT__ON_MYSELF) : (LocalizedNpcText(master, BOT_TEXT__ON_) + iTarget->GetName() + '!');
+                    ReportSpellCast(INNERVATE_1, msg, master);
                 }
 
                 return;
@@ -1538,7 +1539,7 @@ public:
 
                 if (doCast(target, GetSpell(REBIRTH_1))) //rezzing
                 {
-                    BotWhisper("战复 你");
+                    BotWhisper(LocalizedNpcText(master, BOT_TEXT_REZZING_YOU));
                     return;
                 }
             }
@@ -1580,14 +1581,13 @@ public:
                 if (doCast(targetOrCorpse, GetSpell(REBIRTH_1))) //rezzing
                 {
                     if (targetOrCorpse->GetTypeId() == TYPEID_PLAYER)
-                        BotWhisper("战复 You", targetOrCorpse->ToPlayer());
+                        BotWhisper(LocalizedNpcText(targetOrCorpse->ToPlayer(), BOT_TEXT_REZZING_YOU), targetOrCorpse->ToPlayer());
                     if (targetOrCorpse != master)
                     {
-                        std::string rezstr = "战复 ";
-                        rezstr += targetOrCorpse->GetName();
+                        std::string rezstr = LocalizedNpcText(master, BOT_TEXT_REZZING_) + targetOrCorpse->GetName();
                         if (targetOrCorpse->GetTypeId() == TYPEID_UNIT)
-                            rezstr += " (bot tank)";
-                        BotWhisper(rezstr.c_str());
+                            rezstr += " (" + LocalizedNpcText(master, BOT_TEXT_BOT_TANK) + ')';
+                        BotWhisper(rezstr);
                     }
                     return;
                 }
@@ -2143,7 +2143,8 @@ public:
             //Nature's Swiftness: notify master
             if (baseId == NATURES_SWIFTNESS_1)
             {
-                BotWhisper("我已使用自然迅捷!");
+                if (!IAmFree())
+                    ReportSpellCast(NATURES_SWIFTNESS_1, LocalizedNpcText(master, BOT_TEXT__USED), master);
             }
 
             //On next attack spells cooldown handle

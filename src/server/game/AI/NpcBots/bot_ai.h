@@ -1,4 +1,4 @@
-﻿#ifndef _BOT_AI_H
+#ifndef _BOT_AI_H
 #define _BOT_AI_H
 
 #include "CreatureAI.h"
@@ -42,6 +42,8 @@ class bot_ai : public CreatureAI
         bool OnGossipHello(Player* player) override;
         bool OnGossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override;
         bool OnGossipSelectCode(Player* player, uint32 menuId, uint32 gossipListId, char const* code) override;
+
+        static const std::string& LocalizedNpcText(Player const* forPlayer, uint32 textId);
 
         bool OnGossipHello(Player* player, uint32 option);
         bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action);
@@ -91,7 +93,7 @@ class bot_ai : public CreatureAI
         bool HasRole(uint16 role) const { return _roleMask & role; }
         uint8 GetRoleIcon(uint16 role) const;
         char const* GetRoleString(uint16 role) const;
-		static uint16 DefaultRolesForClass(uint8 m_class);
+        static uint16 DefaultRolesForClass(uint8 m_class);
         void ToggleRole(uint16 role, bool force);
         bool IsTank(Unit const* unit = nullptr) const;
         bool IAmFree() const;
@@ -184,7 +186,8 @@ class bot_ai : public CreatureAI
         void ReinitOwner() { InitOwner(); }
         void SetSpec(uint8 spec, bool activate = true);
         uint8 GetSpec() const { return _spec; }
-		static uint8 DefaultSpecForClass(uint8 m_class);
+        static uint8 DefaultSpecForClass(uint8 m_class);
+        static uint32 TextForSpec(uint8 spec);
 
         static bool IsMeleeClass(uint8 m_class);
         static bool IsTankingClass(uint8 m_class);
@@ -236,7 +239,7 @@ class bot_ai : public CreatureAI
 
         virtual bool CanUseManually(uint32 /*basespell*/) const { return false; }
         virtual bool HasAbilitiesSpecifics() const { return false; }
-        virtual void FillAbilitiesSpecifics(std::list<std::string> &/*specList*/) {}
+        virtual void FillAbilitiesSpecifics(Player const* /*player*/, std::list<std::string> &/*specList*/) {}
 
         virtual std::vector<uint32> const* GetDamagingSpellsList() const { return nullptr; }
         virtual std::vector<uint32> const* GetCCSpellsList() const       { return nullptr; }
@@ -356,9 +359,11 @@ class bot_ai : public CreatureAI
 
         void BuildGrouUpdatePacket(WorldPacket* data);
 
-        void BotSay(char const* text, Player const* target = nullptr) const;
-        void BotWhisper(char const* text, Player const* target = nullptr) const;
-        void BotYell(char const* text, Player const* target = nullptr) const;
+        void BotSay(const std::string &text, Player const* target = nullptr) const;
+        void BotWhisper(const std::string &text, Player const* target = nullptr) const;
+        void BotYell(const std::string &text, Player const* target = nullptr) const;
+
+        void ReportSpellCast(uint32 spellId, const std::string& followedByString, Player const* target) const;
 
         void ApplyItemBonuses(uint8 slot);
 
@@ -412,7 +417,6 @@ class bot_ai : public CreatureAI
         void _updateMountedState();
         void _updateStandState() const;
         void _updateRations();
-        char const* _getNameForSlot(uint8 slot) const;
         void _updateEquips(uint8 slot, Item* item);
 
         bool _canUseOffHand() const;
@@ -444,8 +448,8 @@ class bot_ai : public CreatureAI
         void _LocalizeItem(Player const* forPlayer, std::string &itemName, std::string &suffix, Item const* item) const;
         void _LocalizeQuest(Player const* forPlayer, std::string &questTitle, uint32 entry) const;
         void _LocalizeCreature(Player const* forPlayer, std::string &creatureName, uint32 entry) const;
+        void _LocalizeGameObject(Player const* forPlayer, std::string &gameobjectName, uint32 entry) const;
         void _LocalizeSpell(Player const* forPlayer, std::string &spellName, uint32 entry) const;
-		void _LocalizeGameObject(Player const* forPlayer, std::string &gameobjectName, uint32 entry) const;
 
         float _getBotStat(uint8 slot, uint8 stat) const;
         float _getTotalBotStat(uint8 stat) const;

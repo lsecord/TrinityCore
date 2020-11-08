@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botdpstracker.h"
 #include "bot_Events.h"
 #include "botmgr.h"
@@ -830,8 +830,7 @@ BotAddResult BotMgr::AddBot(Creature* bot, bool takeMoney)
     if (!_enableNpcBots)
     {
         ChatHandler ch(_owner->GetSession());
-        ch.SendSysMessage("NpcBot系统当前已禁用。 请联系管理部门.");
-        //ch.SetSentErrorMessage(true);
+        ch.SendSysMessage(bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_BOTADDFAIL_DISABLED).c_str());
         return BOT_ADD_DISABLED;
     }
     if (GetBot(bot->GetGUID()))
@@ -839,23 +838,20 @@ BotAddResult BotMgr::AddBot(Creature* bot, bool takeMoney)
     if (!bot->GetBotAI()->IAmFree())
     {
         ChatHandler ch(_owner->GetSession());
-        ch.PSendSysMessage("%s 不会加入你，已经有了主人: %s",
+        ch.PSendSysMessage(bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_BOTADDFAIL_OWNED).c_str(),
             bot->GetName().c_str(), bot->GetBotOwner()->GetName().c_str());
-        //ch.SetSentErrorMessage(true);
         return BOT_ADD_NOT_AVAILABLE;
     }
     if (bot->GetBotAI()->IsDuringTeleport())
     {
         ChatHandler ch(_owner->GetSession());
-        ch.PSendSysMessage("%s 即将传送时无法加入你", bot->GetName().c_str());
-        //ch.SetSentErrorMessage(true);
+        ch.PSendSysMessage(bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_BOTADDFAIL_TELEPORTED).c_str(), bot->GetName().c_str());
         return BOT_ADD_BUSY;
     }
     if (!temporary && _owner->GetNpcBotsCount() >= GetMaxNpcBots())
     {
         ChatHandler ch(_owner->GetSession());
-        ch.PSendSysMessage("您有超过了最大数量的npcbots (%u)", GetMaxNpcBots());
-        //ch.SetSentErrorMessage(true);
+        ch.PSendSysMessage(bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_HIREFAIL_MAXBOTS).c_str(), GetMaxNpcBots());
         return BOT_ADD_MAX_EXCEED;
     }
     if (!temporary && HaveBot() && _maxClassNpcBots)
@@ -868,8 +864,7 @@ BotAddResult BotMgr::AddBot(Creature* bot, bool takeMoney)
         if (count >= _maxClassNpcBots)
         {
             ChatHandler ch(_owner->GetSession());
-            ch.PSendSysMessage("您不能再拥有该职业的机器人! %u of %u", count, _maxClassNpcBots);
-            //ch.SetSentErrorMessage(true);
+            ch.PSendSysMessage(bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_HIREFAIL_MAXCLASSBOTS).c_str(), count, _maxClassNpcBots);
             return BOT_ADD_MAX_CLASS_EXCEED;
         }
     }
@@ -882,7 +877,6 @@ BotAddResult BotMgr::AddBot(Creature* bot, bool takeMoney)
     //    {
     //        ChatHandler ch(_owner->GetSession());
     //        ch.PSendSysMessage("Instance players limit exceed (%u of %u)", count, map->GetMaxPlayers());
-    //        //ch.SetSentErrorMessage(true);
     //        return BOT_ADD_INSTANCE_LIMIT;
     //    }
     //}
@@ -892,11 +886,10 @@ BotAddResult BotMgr::AddBot(Creature* bot, bool takeMoney)
         if (!_owner->HasEnoughMoney(cost))
         {
             ChatHandler ch(_owner->GetSession());
-            std::string str = "没钱滚 (";
+            std::string str = bot_ai::LocalizedNpcText(GetOwner(), BOT_TEXT_HIREFAIL_COST) + " (";
             str += GetNpcBotCostStr(_owner->GetLevel(), bot->GetBotClass());
             str += ")!";
             ch.SendSysMessage(str.c_str());
-            //ch.SetSentErrorMessage(true);
             return BOT_ADD_CANT_AFFORD;
         }
 

@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botmgr.h"
 #include "Group.h"
 #include "Item.h"
@@ -1664,12 +1664,12 @@ public:
         {
             uint32 baseId = spellInfo->GetFirstRankSpell()->Id;
 
-            if (baseId == LAST_STAND_1)
-                BotWhisper("破釜沉舟已开启!");
-            if (baseId == SHIELD_WALL_1)
-                BotWhisper("盾墙已使用!");
-            if (baseId == ENRAGED_REGENERATION_1)
-                BotWhisper("已放放狂怒回复!");
+            if (baseId == LAST_STAND_1 && !IAmFree())
+                ReportSpellCast(baseId, LocalizedNpcText(master, BOT_TEXT__USED), master);
+            if (baseId == SHIELD_WALL_1 && !IAmFree())
+                ReportSpellCast(baseId, LocalizedNpcText(master, BOT_TEXT__USED), master);
+            if (baseId == ENRAGED_REGENERATION_1 && !IAmFree())
+                ReportSpellCast(baseId, LocalizedNpcText(master, BOT_TEXT__USED), master);
 
             if (baseId == SLAM_1)
                 me->RemoveAura(BLOODSURGE_BUFF);

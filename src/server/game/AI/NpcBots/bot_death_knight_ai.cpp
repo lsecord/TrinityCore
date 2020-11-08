@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botmgr.h"
 #include "GameEventMgr.h"
 #include "Group.h"
@@ -407,7 +407,7 @@ public:
             if (target && doCast(target, GetSpell(HYSTERIA_1)))
             {
                 if (target->GetTypeId() == TYPEID_PLAYER)
-                    BotWhisper("给你施放狂乱!", target->ToPlayer());
+                    ReportSpellCast(HYSTERIA_1, LocalizedNpcText(target->ToPlayer(), BOT_TEXT__ON_YOU), target->ToPlayer());
                 //if (target != master)
                 //{
                 //    std::string hystmsg = "Hysteria on " + (target == me ? "myself" : target->GetName()) + "!";
@@ -613,7 +613,9 @@ public:
             {
                 if (doCast(me, GetSpell(ICEBOUND_FORTITUDE_1)))
                 {
-                    BotWhisper("施放冰封之韧!");
+                    if (!IAmFree())
+                        ReportSpellCast(ICEBOUND_FORTITUDE_1, LocalizedNpcText(master, BOT_TEXT__USED), master);
+
                     getpower();
                 }
             }
@@ -626,7 +628,9 @@ public:
                 {
                     if (doCast(me, GetSpell(VAMPIRIC_BLOOD_1)))
                     {
-                        BotWhisper("施放吸血鬼之血!");
+                        if (!IAmFree())
+                            ReportSpellCast(VAMPIRIC_BLOOD_1, LocalizedNpcText(master, BOT_TEXT__USED), master);
+
                         return;
                     }
                 }
@@ -1124,7 +1128,7 @@ public:
             if ((_spec == BOT_SPEC_DK_UNHOLY) && lvl >= 59)
                 if (SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(spellInfo->Id))
                     if (bonus->ap_bonus > 0.f)
-                    fdamage += bonus->ap_bonus * 0.2f * me->GetTotalAttackPowerValue(BASE_ATTACK);
+                        fdamage += bonus->ap_bonus * 0.2f * me->GetTotalAttackPowerValue(BASE_ATTACK);
             //Merciless Combat (spell): 12% bonus damage for Icy Touch, Howling Blast, Obliterate and Frost Strike on targets with less than 35% hp
             if ((_spec == BOT_SPEC_DK_FROST) && lvl >= 60 &&
                 (baseId == ICY_TOUCH_1 || baseId == HOWLING_BLAST_1 || baseId == OBLITERATE_1 || baseId == FROST_STRIKE_1) &&

@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botcommon.h"
 #include "botdatamgr.h"
 #include "botmgr.h"
@@ -40,9 +40,9 @@ public:
             if (me->isMoving())
                 me->BotStopMovement();
 
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "我需要你的服务", HIRE, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, bot_ai::LocalizedNpcText(player, BOT_TEXT_BOTGIVER_SERVICE), HIRE, GOSSIP_ACTION_INFO_DEF + 1);
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "没事了", 0, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, bot_ai::LocalizedNpcText(player, BOT_TEXT_NEVERMIND), 0, GOSSIP_ACTION_INFO_DEF + 2);
 
             player->PlayerTalkClass->SendGossipMenu(GOSSIP_BOTGIVER_GREET, me->GetGUID());
             return true;
@@ -76,7 +76,7 @@ public:
 
                     if (player->GetNpcBotsCount() >= BotMgr::GetMaxNpcBots())
                     {
-                        WhisperTo(player, "你拥用的NPCbot太多了");
+                        WhisperTo(player, bot_ai::LocalizedNpcText(player, BOT_TEXT_BOTGIVER_TOO_MANY_BOTS).c_str());
                         break;
                     }
 
@@ -100,33 +100,33 @@ public:
                                 continue;
                         }
 
-                        std::ostringstream bclass;
-                        bool validClass = true;
+                        uint32 textId;
                         switch (botclass)
                         {
-                            case BOT_CLASS_WARRIOR:         bclass << "战士";       break;
-                            case BOT_CLASS_PALADIN:         bclass << "圣骑士";       break;
-                            case BOT_CLASS_MAGE:            bclass << "法师";          break;
-                            case BOT_CLASS_PRIEST:          bclass << "牧师";        break;
-                            case BOT_CLASS_WARLOCK:         bclass << "术士";       break;
-                            case BOT_CLASS_DRUID:           bclass << "德鲁伊";         break;
-                            case BOT_CLASS_DEATH_KNIGHT:    bclass << "死亡骑士";  break;
-                            case BOT_CLASS_ROGUE:           bclass << "潜行者";         break;
-                            case BOT_CLASS_SHAMAN:          bclass << "萨满";        break;
-                            case BOT_CLASS_HUNTER:          bclass << "猎人";        break;
-                            case BOT_CLASS_BM:              bclass << "剑圣";   break;
-                            case BOT_CLASS_SPHYNX:          bclass << "黑曜石毁灭者";     break;
-                            case BOT_CLASS_ARCHMAGE:        bclass << "大魔导师";       break;
-                            case BOT_CLASS_DREADLORD:       bclass << "恐惧领主";     break;
-                            case BOT_CLASS_SPELLBREAKER:    bclass << "破法者"; break;
-                            case BOT_CLASS_DARK_RANGER:     bclass << "黑暗游侠";   break;
-                            default:                        validClass = false;         break;
+                            case BOT_CLASS_WARRIOR:     textId = BOT_TEXT_CLASS_WARRIOR_PLU;        break;
+                            case BOT_CLASS_PALADIN:     textId = BOT_TEXT_CLASS_PALADIN_PLU;        break;
+                            case BOT_CLASS_MAGE:        textId = BOT_TEXT_CLASS_MAGE_PLU;           break;
+                            case BOT_CLASS_PRIEST:      textId = BOT_TEXT_CLASS_PRIEST_PLU;         break;
+                            case BOT_CLASS_WARLOCK:     textId = BOT_TEXT_CLASS_WARLOCK_PLU;        break;
+                            case BOT_CLASS_DRUID:       textId = BOT_TEXT_CLASS_DRUID_PLU;          break;
+                            case BOT_CLASS_DEATH_KNIGHT:textId = BOT_TEXT_CLASS_DEATH_KNIGHT_PLU;   break;
+                            case BOT_CLASS_ROGUE:       textId = BOT_TEXT_CLASS_ROGUE_PLU;          break;
+                            case BOT_CLASS_SHAMAN:      textId = BOT_TEXT_CLASS_SHAMAN_PLU;         break;
+                            case BOT_CLASS_HUNTER:      textId = BOT_TEXT_CLASS_HUNTER_PLU;         break;
+                            case BOT_CLASS_BM:          textId = BOT_TEXT_CLASS_BM_PLU;             break;
+                            case BOT_CLASS_SPHYNX:      textId = BOT_TEXT_CLASS_SPHYNX_PLU;         break;
+                            case BOT_CLASS_ARCHMAGE:    textId = BOT_TEXT_CLASS_ARCHMAGE_PLU;       break;
+                            case BOT_CLASS_DREADLORD:   textId = BOT_TEXT_CLASS_DREADLORD_PLU;      break;
+                            case BOT_CLASS_SPELLBREAKER:textId = BOT_TEXT_CLASS_SPELLBREAKER_PLU;   break;
+                            case BOT_CLASS_DARK_RANGER: textId = BOT_TEXT_CLASS_DARK_RANGER_PLU;    break;
+                            default:                    textId = 0;                                 break;
                         }
 
-                        if (validClass == false)
+                        if (!textId)
                             continue;
 
-                        bclass << " (" << BotMgr::GetNpcBotCostStr(player->GetLevel(), botclass) << ")";
+                        std::ostringstream bclass;
+                        bclass << bot_ai::LocalizedNpcText(player, textId) << " (" << BotMgr::GetNpcBotCostStr(player->GetLevel(), botclass) << ")";
 
                         AddGossipItemFor(player, GOSSIP_ICON_TALK, bclass.str(), HIRE_CLASS, GOSSIP_ACTION_INFO_DEF + botclass);
 
@@ -137,7 +137,7 @@ public:
                     if (availCount == 0)
                         gossipTextId = GOSSIP_BOTGIVER_HIRE_EMPTY;
 
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "没事了", 0, GOSSIP_ACTION_INFO_DEF + 1);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, bot_ai::LocalizedNpcText(player, BOT_TEXT_NEVERMIND), 0, GOSSIP_ACTION_INFO_DEF + 1);
 
                     break;
                 }
@@ -150,7 +150,7 @@ public:
                     uint32 cost = BotMgr::GetNpcBotCost(player->GetLevel(), botclass);
                     if (!player->HasEnoughMoney(cost))
                     {
-                        WhisperTo(player, "你没有足够的钱!");
+                        WhisperTo(player, bot_ai::LocalizedNpcText(player, BOT_TEXT_HIREFAIL_COST).c_str());
                         break;
                     }
 
@@ -168,7 +168,7 @@ public:
                             continue;
 
                         std::ostringstream message1;
-                        message1 << "你想雇用 " << bot->GetName() << '?';
+                        message1 << bot_ai::LocalizedNpcText(player, BOT_TEXT_BOTGIVER_WISH_TO_HIRE_) << bot->GetName() << '?';
                         player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_TALK, bot->GetName(),
                             HIRE_ENTRY, GOSSIP_ACTION_INFO_DEF + bot->GetEntry(), message1.str(), cost, false);
 
@@ -179,7 +179,7 @@ public:
                     if (availCount == 0)
                         gossipTextId = GOSSIP_BOTGIVER_HIRE_EMPTY;
 
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<返回>", HIRE, GOSSIP_ACTION_INFO_DEF + 1);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, bot_ai::LocalizedNpcText(player, BOT_TEXT_BACK), HIRE, GOSSIP_ACTION_INFO_DEF + 1);
 
                     break;
                 }
@@ -200,7 +200,7 @@ public:
                     {
                         //TC_LOG_ERROR("entities.unit", "HIRE_NBOT_ENTRY: bot %u (%s) is unavailable all of the sudden!", entry);
                         std::ostringstream failMsg;
-                        failMsg << bot->GetName() << "  目前有点忙，请稍后再试.";
+                        failMsg << bot->GetName() << bot_ai::LocalizedNpcText(player, BOT_TEXT_BOTGIVER__BOT_BUSY);
                         WhisperTo(player, failMsg.str().c_str());
                         break;
                     }
@@ -209,7 +209,7 @@ public:
                     bot->GetBotAI()->OnGossipSelect(player, me, GOSSIP_SENDER_HIRE, GOSSIP_ACTION_INFO_DEF);
 
                     if (player->HaveBot() && player->GetBotMgr()->GetBot(bot->GetGUID()))
-                        WhisperTo(player, "很高兴与你合作");
+                        WhisperTo(player, bot_ai::LocalizedNpcText(player, BOT_TEXT_BOTGIVER_HIRESUCCESS).c_str());
 
                     break;
                 }

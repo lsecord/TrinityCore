@@ -25,7 +25,7 @@
 #include "ObjectAccessor.h"
 #include "Pet.h"
 #include "Player.h"
- 
+
 //npcbot
 #include "botmgr.h"
 //end npcbot
@@ -202,7 +202,6 @@ void TempSummon::InitStats(uint32 duration)
 
     //npcbot: skip deleting/reassigning player totems
     //normally no creatorGUID is assigned at this point, perform full check anyway for compatibilty reasons
-							   
     if (!(m_Properties->Slot && m_Properties->Slot >= SUMMON_SLOT_TOTEM_FIRE && m_Properties->Slot < MAX_TOTEM_SLOT &&
         GetCreatorGUID() && GetCreatorGUID().IsCreature() && owner && owner->GetTypeId() == TYPEID_PLAYER &&
         owner->ToPlayer()->HaveBot() && owner->ToPlayer()->GetBotMgr()->GetBot(GetCreatorGUID())))
@@ -344,7 +343,7 @@ void Minion::InitStats(uint32 duration)
     TempSummon::InitStats(duration);
 
     SetReactState(REACT_PASSIVE);
- 
+
     //npcbot
     //do not add bot totem to player's controlled list
     //client indicator will be OwnerGUID

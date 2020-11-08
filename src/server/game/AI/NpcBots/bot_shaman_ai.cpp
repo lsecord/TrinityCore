@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botmgr.h"
 #include "Group.h"
 #include "Item.h"
@@ -1318,7 +1318,7 @@ public:
             if (!target || !target->IsAlive() || target->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION || me->GetDistance(target) > 40)
                 return false;
             uint8 hp = GetHealthPCT(target);
-			bool pointed = IsPointedHealTarget(target);
+            bool pointed = IsPointedHealTarget(target);
             if (hp > 90 && !(pointed && me->GetMap()->IsRaid()) &&
                 (!target->IsInCombat() || target->getAttackers().empty() || !IsTank(target) || !me->GetMap()->IsRaid()))
                 return false;
@@ -1751,23 +1751,23 @@ public:
             uint32 baseId = spellInfo->GetFirstRankSpell()->Id;
 
             //reincarnation: notify master
-            if (baseId == REINCARNATION_1)
+            if (baseId == REINCARNATION_1 && !IAmFree())
             {
-                BotWhisper("使用灵魂图腾!");
+                ReportSpellCast(baseId, LocalizedNpcText(master, BOT_TEXT__USED), master);
 
                 //no spellHit trigger - do it here
                 SpellHit(me, spellInfo);
                 me->CastSpell(me, RESURRECTION_VISUAL_SPELL, true);
             }
             //manatide: notify
-            if (baseId == MANA_TIDE_TOTEM_1)
+            if (baseId == MANA_TIDE_TOTEM_1 && !IAmFree())
             {
-                BotWhisper("使用法力潮汐!");
+                ReportSpellCast(baseId, LocalizedNpcText(master, BOT_TEXT__USED), master);
             }
             //Nature's Swiftness: notify master
-            if (baseId == NATURES_SWIFTNESS_1)
+            if (baseId == NATURES_SWIFTNESS_1 && !IAmFree())
             {
-                BotWhisper("使用大自然的迅捷!");
+                ReportSpellCast(baseId, LocalizedNpcText(master, BOT_TEXT__USED), master);
             }
 
             //Handle Clearcasting
@@ -1889,7 +1889,7 @@ public:
                     itemSlot = BOT_SLOT_OFFHAND;
                 }
                 else
-                    ASSERT(false && "萨满仆人试图给他的武器施放魔法，但找不到武器来施法!");
+                    ASSERT(false && "shaman bot attempted to enchant his weapons but cannot find a weapon to apply it!");
 
                 if (!IAmFree())
                     master->GetSession()->SendEnchantmentLog(me->GetGUID(), me->GetGUID(), item->GetEntry(), enchant_id);
@@ -2261,13 +2261,8 @@ public:
                 case TOTEM_OF_WRATH_1:          btype = BOT_TOTEM_WRATH;                break;
                 default:
                 {
+                    TC_LOG_ERROR("scripts", "Unknown totem create spell %u!", createSpell);
                     btype = BOT_TOTEM_NONE;
-                    if (!IAmFree())
-                    {
-                        std::ostringstream msg;
-                        msg << "未知图腾制造法术: " << createSpell << "!";
-                        BotWhisper(msg.str().c_str());
-                    }
                     break;
                 }
             }
@@ -2288,7 +2283,7 @@ public:
             summon->SetPvP(me->IsPvP());
             summon->SetOwnerGUID(master->GetGUID());
             summon->SetControlledByPlayer(!IAmFree());
-			summon->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);														   
+            summon->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
             // totem will claim master's summon slot
             // free it to avoid conflicts with other shaman bots and master
             // if master is a shaman his totem will despawn
@@ -2610,33 +2605,29 @@ public:
         }
 
         bool HasAbilitiesSpecifics() const override { return true; }
-        void FillAbilitiesSpecifics(std::list<std::string> &specList) override
+        void FillAbilitiesSpecifics(Player const* player, std::list<std::string> &specList) override
         {
-            std::ostringstream msg1;
-            msg1 << "主手: ";
+            uint32 textId1, textId2;
             switch (mhEnchant)
             {
-                //case ROCKBITER_WEAPON_1:   msg1 << "Rockbiter";  break;
-                case FLAMETONGUE_WEAPON_1: msg1 << "火舌武器";break;
-                case FROSTBRAND_WEAPON_1:  msg1 << "冰封武器";break;
-                case WINDFURY_WEAPON_1:    msg1 << "风怒武器";break;
-                case EARTHLIVING_WEAPON_1: msg1 << "大地生命武器";break;
-                default:                   msg1 << "武器没有附魔";break;
+                //case ROCKBITER_WEAPON_1:   textId1 = BOT_TEXT_"Rockbiter";  break;
+                case FLAMETONGUE_WEAPON_1: textId1 = BOT_TEXT_FLAMETONGUE;  break;
+                case FROSTBRAND_WEAPON_1:  textId1 = BOT_TEXT_FROSTBRAND;   break;
+                case WINDFURY_WEAPON_1:    textId1 = BOT_TEXT_WINDFURY;     break;
+                case EARTHLIVING_WEAPON_1: textId1 = BOT_TEXT_EARTHLIVING;  break;
+                default:                   textId1 = BOT_TEXT_NOTHING_C;    break;
             }
-            specList.push_back(msg1.str());
-
-            std::ostringstream msg2;
-            msg2 << "副手: ";
             switch (ohEnchant)
             {
-                //case ROCKBITER_WEAPON_1:   msg2 << "Rockbiter";  break;
-                case FLAMETONGUE_WEAPON_1: msg2 << "火舌武器";break;
-                case FROSTBRAND_WEAPON_1:  msg2 << "冰封武器";break;
-                case WINDFURY_WEAPON_1:    msg2 << "风怒武器";break;
-                case EARTHLIVING_WEAPON_1: msg2 << "大地生命武器";break;
-                default:                   msg2 << "武器没有附魔";break;
+                //case ROCKBITER_WEAPON_1:   textId1 = BOT_TEXT_"Rockbiter";  break;
+                case FLAMETONGUE_WEAPON_1: textId1 = BOT_TEXT_FLAMETONGUE;  break;
+                case FROSTBRAND_WEAPON_1:  textId1 = BOT_TEXT_FROSTBRAND;   break;
+                case WINDFURY_WEAPON_1:    textId1 = BOT_TEXT_WINDFURY;     break;
+                case EARTHLIVING_WEAPON_1: textId1 = BOT_TEXT_EARTHLIVING;  break;
+                default:                   textId2 = BOT_TEXT_NOTHING_C;    break;
             }
-            specList.push_back(msg2.str());
+            specList.push_back(LocalizedNpcText(player, BOT_TEXT_SLOT_MH) + ": " + LocalizedNpcText(player, textId1));
+            specList.push_back(LocalizedNpcText(player, BOT_TEXT_SLOT_OH) + ": " + LocalizedNpcText(player, textId2));
         }
 
         std::vector<uint32> const* GetDamagingSpellsList() const

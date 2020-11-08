@@ -1,4 +1,5 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
+//#include "botcommon.h"
 #include "bot_Events.h"
 #include "bot_GridNotifiers.h"
 #include "botmgr.h"
@@ -20,11 +21,10 @@
 #include "SpellAuraEffects.h"
 /*
 NpcBot System by Trickerer (https://github.com/trickerer/Trinity-Bots; onlysuffering@gmail.com)
-Version 4.8.2a
+Version 4.9.0a
 Original idea: https://bitbucket.org/lordpsyan/trinitycore-patches/src/3b8b9072280e/Individual/11185-BOTS-NPCBots.patch
 TODO:
 Bot commands to RBAC permissions
-Export strings to make them localizable
 dk pets (garg, aod, rdw)
 'Go there and do stuff' scenarios
 Encounter Scenarios
@@ -112,41 +112,6 @@ uint8 GroupIconsFlags[TARGETICONCOUNT] =
     /*SQUARE      = */0x020,
     /*CROSS       = */0x040,
     /*SKULL       = */0x080
-};
-#define BOT_SPECS_COUNT 31
-const char* BotTalentSpecStrings[BOT_SPECS_COUNT] =
-{
-    "武器",//测试编码是否乱码
-    "狂怒",
-    "防御",
-    "神圣",
-    "防护",
-    "惩戒",
-    "野兽掌握",
-    "射击",
-    "生存",
-    "刺杀",
-    "战斗",
-    "敏锐",
-    "戒律",
-    "神圣",
-    "暗影",
-    "鲜血",
-    "冰霜",
-    "邪恶",
-    "元素",
-    "增强",
-    "恢复",
-    "奥术",
-    "火焰",
-    "冰霜",
-    "痛苦",
-    "恶魔学识",
-    "毁灭",
-    "平衡",
-    "野性战斗",
-    "恢复",
-    "未知"
 };
 
 void ApplyBotPercentModFloatVar(float &var, float val, bool apply)
@@ -285,16 +250,44 @@ void bot_ai::GenerateRand() const
     __rand = urand(0, IAmFree() ? 100 : 100 + (master->GetNpcBotsCount() - 1) * 2);
 }
 
-void bot_ai::BotSay(char const* text, Player const* target) const
+std::map<uint32, std::string> unk_botstrings;
+const std::string& bot_ai::LocalizedNpcText(Player const* forPlayer, uint32 textId)
+{
+    LocaleConstant loc = forPlayer ? forPlayer->GetSession()->GetSessionDbLocaleIndex() : sWorld->GetDefaultDbcLocale();
+
+    if (GossipText const* nt = sObjectMgr->GetGossipText(textId))
+    {
+        std::wstring wnamepart;
+        NpcTextLocale const* ntl = sObjectMgr->GetNpcTextLocale(textId);
+        if (loc != DEFAULT_LOCALE && ntl && !ntl->Text_0[0][loc].empty() && Utf8FitTo(ntl->Text_0[0][loc], wnamepart))
+            return ntl->Text_0[0][loc];
+        else
+            return nt->Options[0].Text_0;
+    }
+
+    if (!unk_botstrings.count(textId))
+    {
+        TC_LOG_ERROR("entities.player", "NPCBots: bot text string #%u is not localized, at least for %s",
+            textId, localeNames[loc]);
+
+        std::ostringstream msg;
+        msg << (loc == DEFAULT_LOCALE ? "<undefined string " : "<unlocalized string ") << textId << ">";
+        unk_botstrings[textId] = msg.str();
+    }
+
+    return unk_botstrings[textId];
+}
+
+void bot_ai::BotSay(const std::string &text, Player const* target) const
 {
     if (!target && master->GetTypeId() == TYPEID_PLAYER)
         target = master;
     if (!target)
         return;
 
-    me->Say(text, LANG_UNIVERSAL, target);
+    me->Say(text.c_str(), LANG_UNIVERSAL, target);
 }
-void bot_ai::BotWhisper(char const* text, Player const* target) const
+void bot_ai::BotWhisper(const std::string &text, Player const* target) const
 {
     if (!target && master->GetTypeId() == TYPEID_PLAYER)
         target = master;
@@ -303,22 +296,29 @@ void bot_ai::BotWhisper(char const* text, Player const* target) const
 
     Player* playerTarget = const_cast<Player*>(target);
 
-    me->Whisper(text, LANG_UNIVERSAL, playerTarget);
+    me->Whisper(text.c_str(), LANG_UNIVERSAL, playerTarget);
 }
-void bot_ai::BotYell(char const* text, Player const* /*target*/) const
+void bot_ai::BotYell(const std::string &text, Player const* /*target*/) const
 {
     //if (!target && master->GetTypeId() == TYPEID_PLAYER)
     //    target = master;
     //if (!target)
     //    return;
 
-    me->Yell(text, LANG_UNIVERSAL);
+    me->Yell(text.c_str(), LANG_UNIVERSAL);
+}
+
+void bot_ai::ReportSpellCast(uint32 spellId, const std::string& followedByString, Player const* target) const
+{
+    std::string spellName;
+    _LocalizeSpell(target, spellName, spellId);
+    BotWhisper(spellName + followedByString, target);
 }
 
 bool bot_ai::SetBotOwner(Player* newowner)
 {
-    ASSERT(newowner && "试图设置一个空的雇主!!!");
-    ASSERT(newowner->GetGUID().IsPlayer() && "试图将非玩家设置为雇主!!!");
+    ASSERT(newowner && "Trying to set NULL owner!!!");
+    ASSERT(newowner->GetGUID().IsPlayer() && "Trying to set a non-player as owner!!!");
     //ASSERT(master->GetGUID() == me->GetGUID());
     //ASSERT(IAmFree());
 
@@ -390,90 +390,90 @@ bool bot_ai::SetBotOwner(Player* newowner)
 //Check if should totally unlink from owner
 void bot_ai::CheckOwnerExpiry()
 {
-   if (!BotMgr::GetOwnershipExpireTime())
-       return; //disabled
+    if (!BotMgr::GetOwnershipExpireTime())
+        return; //disabled
 
-   NpcBotData const* npcBotData = BotDataMgr::SelectNpcBotData(me->GetEntry());
-   ASSERT(npcBotData && "bot_ai::CheckOwnerExpiry(): data not found!");
+    NpcBotData const* npcBotData = BotDataMgr::SelectNpcBotData(me->GetEntry());
+    ASSERT(npcBotData && "bot_ai::CheckOwnerExpiry(): data not found!");
 
-   NpcBotExtras const* npcBotExtra = BotDataMgr::SelectNpcBotExtras(me->GetEntry());
-   ASSERT(npcBotExtra && "bot_ai::CheckOwnerExpiry(): extra data not found!");
+    NpcBotExtras const* npcBotExtra = BotDataMgr::SelectNpcBotExtras(me->GetEntry());
+    ASSERT(npcBotExtra && "bot_ai::CheckOwnerExpiry(): extra data not found!");
 
-   if (npcBotData->owner == 0)
-       return;
+    if (npcBotData->owner == 0)
+        return;
 
-   ObjectGuid ownerGuid = ObjectGuid(HighGuid::Player, 0, npcBotData->owner);
-   time_t timeNow = time(0);
-   time_t expireTime = time_t(BotMgr::GetOwnershipExpireTime());
-   uint32 accId = sCharacterCache->GetCharacterAccountIdByGuid(ownerGuid);
-   QueryResult result = accId ? LoginDatabase.PQuery("SELECT UNIX_TIMESTAMP(last_login) FROM account WHERE id = %u", accId) : NULL;
+    ObjectGuid ownerGuid = ObjectGuid(HighGuid::Player, 0, npcBotData->owner);
+    time_t timeNow = time(0);
+    time_t expireTime = time_t(BotMgr::GetOwnershipExpireTime());
+    uint32 accId = sCharacterCache->GetCharacterAccountIdByGuid(ownerGuid);
+    QueryResult result = accId ? LoginDatabase.PQuery("SELECT UNIX_TIMESTAMP(last_login) FROM account WHERE id = %u", accId) : nullptr;
 
-   Field* fields = result ? result->Fetch() : nullptr;
-   time_t lastLoginTime = result ? time_t(fields[0].GetUInt32()) : timeNow;
+    Field* fields = result ? result->Fetch() : nullptr;
+    time_t lastLoginTime = result ? time_t(fields[0].GetUInt32()) : timeNow;
 
-   //either expired or owner does not exist
-   if (timeNow >= lastLoginTime + expireTime)
-   {
-       std::string name = "unknown";
-       sCharacterCache->GetCharacterNameByGuid(ownerGuid, name);
-       TC_LOG_DEBUG("server.loading", ">> %s's (guid: %u) ownership over bot %s (%u) has expired!",
-           name.c_str(), npcBotData->owner, me->GetName().c_str(), me->GetEntry());
+    //either expired or owner does not exist
+    if (timeNow >= lastLoginTime + expireTime)
+    {
+        std::string name = "unknown";
+        sCharacterCache->GetCharacterNameByGuid(ownerGuid, name);
+        TC_LOG_DEBUG("server.loading", ">> %s's (guid: %u) ownership over bot %s (%u) has expired!",
+            name.c_str(), npcBotData->owner, me->GetName().c_str(), me->GetEntry());
 
-       //send all items back
-       CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_NPCBOT_EQUIP_BY_ITEM_INSTANCE);
-       //        0            1                2      3         4        5      6             7                 8           9           10    11    12         13
-       //"SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, guid, itemEntry, owner_guid "
-       //  "FROM item_instance WHERE guid IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_SYNCH
+        //send all items back
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_NPCBOT_EQUIP_BY_ITEM_INSTANCE);
+        //        0            1                2      3         4        5      6             7                 8           9           10    11    12         13
+        //"SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, guid, itemEntry, owner_guid "
+        //  "FROM item_instance WHERE guid IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_SYNCH
 
-       for (uint8 i = 0; i != BOT_INVENTORY_SIZE; ++i)
-           stmt->setUInt32(i, npcBotData->equips[i]);
+        for (uint8 i = 0; i != BOT_INVENTORY_SIZE; ++i)
+            stmt->setUInt32(i, npcBotData->equips[i]);
 
-       PreparedQueryResult iiresult = CharacterDatabase.Query(stmt);
-       if (iiresult)
-       {
-           std::vector<Item*> items;
+        PreparedQueryResult iiresult = CharacterDatabase.Query(stmt);
+        if (iiresult)
+        {
+            std::vector<Item*> items;
 
-           do
-           {
-               Field* fields2 = iiresult->Fetch();
-               uint32 itemGuidLow = fields2[11].GetUInt32();
-               uint32 itemId = fields2[12].GetUInt32();
-               Item* item = new Item;
-               ASSERT(item->LoadFromDB(itemGuidLow, ObjectGuid::Empty, fields2, itemId));
-               items.push_back(item);
+            do
+            {
+                Field* fields2 = iiresult->Fetch();
+                uint32 itemGuidLow = fields2[11].GetUInt32();
+                uint32 itemId = fields2[12].GetUInt32();
+                Item* item = new Item;
+                ASSERT(item->LoadFromDB(itemGuidLow, ObjectGuid::Empty, fields2, itemId));
+                items.push_back(item);
 
-           } while (iiresult->NextRow());
+            } while (iiresult->NextRow());
 
-           CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-           while (!items.empty())
-           {
-               static const std::string subject = "Bot ownership expired due to inactivity";
-               MailDraft draft(subject, "");
-               for (uint8 i = 0; !items.empty() && i < MAX_MAIL_ITEMS; ++i)
-               {
-                   Item* item = items.back();
-                   items.pop_back();
-                   item->SetOwnerGUID(ownerGuid);
-                   item->SaveToDB(trans);
-                   draft.AddItem(item);
-               }
-               draft.SendMailTo(trans, MailReceiver(npcBotData->owner), MailSender(me, MAIL_STATIONERY_GM));
-           }
-           CharacterDatabase.CommitTransaction(trans);
+            CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+            while (!items.empty())
+            {
+                static const std::string subject = LocalizedNpcText(nullptr, BOT_TEXT_OWNERSHIP_EXPIRED);
+                MailDraft draft(subject, "");
+                for (uint8 i = 0; !items.empty() && i < MAX_MAIL_ITEMS; ++i)
+                {
+                    Item* item = items.back();
+                    items.pop_back();
+                    item->SetOwnerGUID(ownerGuid);
+                    item->SaveToDB(trans);
+                    draft.AddItem(item);
+                }
+                draft.SendMailTo(trans, MailReceiver(npcBotData->owner), MailSender(me, MAIL_STATIONERY_GM));
+            }
+            CharacterDatabase.CommitTransaction(trans);
 
-           BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_EQUIPS, _equips);
-       }
+            BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_EQUIPS, _equips);
+        }
 
-       //hard reset owner
-       uint32 newOwner = 0;
-       BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_OWNER, &newOwner);
-       //...roles
-       uint16 roleMask = DefaultRolesForClass(npcBotExtra->bclass);
-       BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_ROLES, &roleMask);
-       //...and spec
-       uint8 spec = DefaultSpecForClass(npcBotExtra->bclass);
-       BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_SPEC, &spec);
-   }
+        //hard reset owner
+        uint32 newOwner = 0;
+        BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_OWNER, &newOwner);
+        //...roles
+        uint16 roleMask = DefaultRolesForClass(npcBotExtra->bclass);
+        BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_ROLES, &roleMask);
+        //...and spec
+        uint8 spec = DefaultSpecForClass(npcBotExtra->bclass);
+        BotDataMgr::UpdateNpcBotData(me->GetEntry(), NPCBOT_UPDATE_SPEC, &spec);
+    }
 }
 
 void bot_ai::ResetBotAI(uint8 resetType)
@@ -492,7 +492,7 @@ void bot_ai::ResetBotAI(uint8 resetType)
     me->SetUInt32Value(UNIT_FIELD_FLAGS_2, me->GetCreatureTemplate()->unit_flags2);
 
     if (resetType == BOTAI_RESET_DISMISS)
-       // EnableAllSpells(); //在重置或remove 后防止NPC技能配置被清空,禁用
+        EnableAllSpells();
 
     //me->IsAIEnabled = true;
     canUpdate = true;
@@ -1292,7 +1292,7 @@ void bot_ai::RezGroup(uint32 REZZ)
         if (doCast(target, REZZ)) //rezzing it
         {
             if (Player const* player = playerOrCorpse->GetTypeId() == TYPEID_PLAYER ? playerOrCorpse->ToPlayer() : ObjectAccessor::FindPlayer(playerOrCorpse->ToCorpse()->GetOwnerGUID()))
-                BotWhisper("复活你", player);
+                BotWhisper(LocalizedNpcText(player, BOT_TEXT_REZZING_YOU), player);
         }
 
         return;
@@ -1318,7 +1318,7 @@ void bot_ai::RezGroup(uint32 REZZ)
             me->Relocate(*target);
 
         if (doCast(target, REZZ))//rezzing it
-            BotWhisper("复活你");
+            BotWhisper(LocalizedNpcText(master, BOT_TEXT_REZZING_YOU));
 
         return;
     }
@@ -1352,13 +1352,10 @@ void bot_ai::RezGroup(uint32 REZZ)
 
         if (doCast(target, REZZ))//rezzing it
         {
-            BotWhisper("复活你", player);
+            BotWhisper(LocalizedNpcText(player, BOT_TEXT_REZZING_YOU), player);
             if (player != master)
-            {
-                std::string rezstr = "复活 ";
-                rezstr += player->GetName();
-                BotWhisper(rezstr.c_str());
-            }
+                BotWhisper(LocalizedNpcText(master, BOT_TEXT_REZZING_) + player->GetName());
+
             return;
         }
     }
@@ -1396,25 +1393,17 @@ void bot_ai::RezGroup(uint32 REZZ)
         Player const* targetOwner = target->ToCreature()->GetBotOwner();
         if (targetOwner != master)
         {
-            std::string rezstr1 = "复活 ";
-            rezstr1 += target->GetName();
-            rezstr1 += " (你的仆从)";
+            std::string rezstr1 =
+                LocalizedNpcText(targetOwner, BOT_TEXT_REZZING_) + target->GetName() + " (" + LocalizedNpcText(targetOwner, BOT_TEXT_YOUR_BOT) + ")";
+            std::string rezstr2 =
+                LocalizedNpcText(master, BOT_TEXT_REZZING_) + target->GetName() + " (" + targetOwner->GetName() + LocalizedNpcText(master, BOT_TEXT__S_BOT) + ")";
 
-            std::string rezstr2 = "v ";
-            rezstr2 += target->GetName();
-            rezstr2 += " (";
-            rezstr2 += targetOwner->GetName();
-            rezstr2 += "'的仆从)";
-
-            BotWhisper(rezstr1.c_str(), targetOwner);
-            BotWhisper(rezstr2.c_str());
+            BotWhisper(rezstr1, targetOwner);
+            BotWhisper(rezstr2);
         }
         else
-        {
-            std::string rezstr3 = "复活 ";
-            rezstr3 += target->GetName();
-            BotWhisper(rezstr3.c_str());
-        }
+            BotWhisper(LocalizedNpcText(master, BOT_TEXT_REZZING_) + target->GetName());
+
         return;
     }
 }
@@ -1699,15 +1688,15 @@ void bot_ai::_listAuras(Player const* player, Unit const* unit) const
     std::ostringstream botstring;
     botstring.setf(std::ios_base::fixed);
     uint32 const bot_pet_player_class = unit->GetTypeId() == TYPEID_PLAYER ? unit->GetClass() : unit->ToCreature()->GetBotAI()->GetBotClass();
-    botstring << "仆从" << unit->GetName().c_str() << "技能列表,(职业: " << uint32(bot_pet_player_class) << "), ";
+    botstring << unit->GetName() << " (" << LocalizedNpcText(player, BOT_TEXT_CLASS) << ": " << uint32(bot_pet_player_class) << "), ";
     if (unit->GetTypeId() == TYPEID_PLAYER)
-        botstring << "玩家";
+        botstring << LocalizedNpcText(player, BOT_TEXT_PLAYER);
     else if (unit->GetTypeId() == TYPEID_UNIT && unit->ToCreature()->IsNPCBot())
     {
         bot_ai const* ai = unit->ToCreature()->GetBotAI();
-        botstring << "雇主: ";
+        botstring << LocalizedNpcText(player, BOT_TEXT_MASTER) << ": ";
         Player const* owner = ai->GetBotOwner();
-        botstring << (owner != unit ? owner->GetName() : "暂无");
+        botstring << (owner != unit ? owner->GetName() : LocalizedNpcText(player, BOT_TEXT_NONE));
     }
     uint8 locale = player->GetSession()->GetSessionDbcLocale();
     Unit::AuraMap const &vAuras = unit->GetOwnedAuras();
@@ -1719,7 +1708,7 @@ void bot_ai::_listAuras(Player const* player, Unit const* unit) const
         uint32 id = spellInfo->Id;
         SpellInfo const* learnSpellInfo = sSpellMgr->GetSpellInfo(spellInfo->Effects[0].TriggerSpell);
         const std::string name = spellInfo->SpellName[locale];
-        botstring << "\n" << id << " - |cffffffff|H法术:" << id << "|h[" << name;
+        botstring << "\n" << id << " - |cffffffff|Hspell:" << id << "|h[" << name;
         botstring << ' ' << localeNames[locale] << "]|h|r";
         uint32 talentcost = GetTalentSpellCost(id);
         uint32 rank = 0;
@@ -1730,18 +1719,18 @@ void bot_ai::_listAuras(Player const* player, Unit const* unit) const
         else if (spellInfo->GetNextRankSpell() || spellInfo->GetPrevRankSpell())
             rank = spellInfo->GetRank();
         if (rank > 0)
-            botstring << " 等级 " << rank;
+            botstring << " " << LocalizedNpcText(player, BOT_TEXT_RANK) << " " << rank;
         if (talentcost > 0)
-            botstring << " [天赋]";
+            botstring << " [" << LocalizedNpcText(player, BOT_TEXT_TALENT) << "]";
         if (spellInfo->IsPassive())
-            botstring << " [被动]";
+            botstring << " [" << LocalizedNpcText(player, BOT_TEXT_PASSIVE) << "]";
         if ((spellInfo->Attributes & SPELL_ATTR0_HIDDEN_CLIENTSIDE) ||
             (spellInfo->AttributesEx & SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR))
-            botstring << " [隐藏]";
+            botstring << " [" << LocalizedNpcText(player, BOT_TEXT_HIDDEN) << "]";
         if (unit->GetTypeId() == TYPEID_PLAYER && unit->ToPlayer()->HasSpell(id))
-            botstring << " [已知]";
+            botstring << " [" << LocalizedNpcText(player, BOT_TEXT_KNOWN) << "]";
         else if (unit == me && GetSpell(spellInfo->GetFirstRankSpell()->Id))
-            botstring << " [技能]";
+            botstring << " [" << LocalizedNpcText(player, BOT_TEXT_ABILITY) << "]";
     }
     botstring.precision(1);
     for (uint8 i = STAT_STRENGTH; i != MAX_STATS; ++i)
@@ -1749,12 +1738,12 @@ void bot_ai::_listAuras(Player const* player, Unit const* unit) const
         std::string mystat;
         switch (i)
         {
-            case STAT_STRENGTH: mystat = "力量"; break;
-            case STAT_AGILITY: mystat = "敏捷"; break;
-            case STAT_STAMINA: mystat = "耐力"; break;
-            case STAT_INTELLECT: mystat = "智力"; break;
-            case STAT_SPIRIT: mystat = "精神"; break;
-            default: mystat = "未知属性"; break;
+            case STAT_STRENGTH: mystat = LocalizedNpcText(player, BOT_TEXT_STAT_STR); break;
+            case STAT_AGILITY: mystat = LocalizedNpcText(player, BOT_TEXT_STAT_AGI); break;
+            case STAT_STAMINA: mystat = LocalizedNpcText(player, BOT_TEXT_STAT_STA); break;
+            case STAT_INTELLECT: mystat = LocalizedNpcText(player, BOT_TEXT_STAT_INT); break;
+            case STAT_SPIRIT: mystat = LocalizedNpcText(player, BOT_TEXT_STAT_SPI); break;
+            default: mystat = LocalizedNpcText(player, BOT_TEXT_STAT_UNK); break;
         }
         //ch.PSendSysMessage("base %s: %.1f", mystat.c_str(), unit->GetCreateStat(Stats(i));
         float totalstat = unit->GetTotalStatValue(Stats(i));
@@ -1775,36 +1764,36 @@ void bot_ai::_listAuras(Player const* player, Unit const* unit) const
             if (t >= BOT_STAT_MOD_MANA)
                 totalstat = GetTotalBotStat(t);
         }
-        botstring << "\n基础属性" << mystat << ": " << float(totalstat);
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_TOTAL) << " " << mystat << ": " << float(totalstat);
     }
     botstring.precision(2);
-    botstring << "\n近战伤害: " << int32(unit->GetTotalAttackPowerValue(BASE_ATTACK));
-    botstring << "\n远程伤害: " << int32(unit->GetTotalAttackPowerValue(RANGED_ATTACK));
-    botstring << "\n护甲: " << uint32(unit->GetArmor());
-    botstring << "\n暴击: " << float(unit->GetUnitCriticalChanceDone(BASE_ATTACK));
-    botstring << "\n防御: " << uint32(unit->GetDefenseSkillValue());
-    botstring << "\n命中 : " << float(unit->GetUnitMissChance());
-    botstring << "\n躲闪: " << float(unit->GetUnitDodgeChance(BASE_ATTACK, me));
-    botstring << "\n招架: " << float(unit->GetUnitParryChance(BASE_ATTACK, me));
-    botstring << "\n格挡: " << float(unit->GetUnitBlockChance(BASE_ATTACK, me));
-    botstring << "\n格挡值: " << uint32(unit->GetShieldBlockValue());
-    botstring << "\n物理伤害: " << float(dmg_taken_phy * unit->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, SPELL_SCHOOL_MASK_NORMAL));
-    botstring << "\n法术伤害: " << float(dmg_taken_mag * unit->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, SPELL_SCHOOL_MASK_MAGIC));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_MELEE_AP) << ": " << int32(unit->GetTotalAttackPowerValue(BASE_ATTACK));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_RANGED_AP) << ": " << int32(unit->GetTotalAttackPowerValue(RANGED_ATTACK));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_ARMOR) << ": " << uint32(unit->GetArmor());
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_CRIT) << ": " << float(unit->GetUnitCriticalChanceDone(BASE_ATTACK));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DEFENSE) << ": " << uint32(unit->GetDefenseSkillValue());
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_MISS) << ": " << float(unit->GetUnitMissChance());
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DODGE) << ": " << float(unit->GetUnitDodgeChance(BASE_ATTACK, me));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_PARRY) << ": " << float(unit->GetUnitParryChance(BASE_ATTACK, me));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_BLOCK) << ": " << float(unit->GetUnitBlockChance(BASE_ATTACK, me));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_BLOCKVALUE) << ": " << uint32(unit->GetShieldBlockValue());
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DMG_TAKEN_MELEE) << ": " << float(dmg_taken_phy * unit->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, SPELL_SCHOOL_MASK_NORMAL));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DMG_TAKEN_SPELL) << ": " << float(dmg_taken_mag * unit->GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, SPELL_SCHOOL_MASK_MAGIC));
 
     WeaponAttackType type = BASE_ATTACK;
     float attSpeed = (unit->GetAttackTime(type) * unit->m_modAttackSpeedPct[type])/1000.f;
-    botstring << "\n主手伤害: " << int32(unit->GetFloatValue(UNIT_FIELD_MINDAMAGE)) << ", max: " << int32(unit->GetFloatValue(UNIT_FIELD_MAXDAMAGE));
-    botstring << "\n主手伤害加成: " << float(unit->GetPctModifierValue(UNIT_MOD_DAMAGE_MAINHAND, BASE_PCT)*unit->GetPctModifierValue(UNIT_MOD_DAMAGE_MAINHAND, TOTAL_PCT));
-    botstring << "\n主手攻击速度: " << float(attSpeed)
-        << " (" << float(((unit->GetFloatValue(UNIT_FIELD_MINDAMAGE) + unit->GetFloatValue(UNIT_FIELD_MAXDAMAGE)) / 2) / attSpeed) << " DPS)";
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DMG_RANGE_MAINHAND) << ": " << LocalizedNpcText(player, BOT_TEXT_MIN) << ": " << int32(unit->GetFloatValue(UNIT_FIELD_MINDAMAGE)) << ", " << LocalizedNpcText(player, BOT_TEXT_MAX) << ": " << int32(unit->GetFloatValue(UNIT_FIELD_MAXDAMAGE));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DMG_MULT_MAINHAND) << ": " << float(unit->GetPctModifierValue(UNIT_MOD_DAMAGE_MAINHAND, BASE_PCT)*unit->GetPctModifierValue(UNIT_MOD_DAMAGE_MAINHAND, TOTAL_PCT));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_ATTACK_TIME_MAINHAND) << ": " << float(attSpeed)
+        << " (" << float(((unit->GetFloatValue(UNIT_FIELD_MINDAMAGE) + unit->GetFloatValue(UNIT_FIELD_MAXDAMAGE)) / 2) / attSpeed) << " " << LocalizedNpcText(player, BOT_TEXT_DPS) << ")";
     if (unit->haveOffhandWeapon())
     {
         type = OFF_ATTACK;
         attSpeed = (unit->GetAttackTime(type) * unit->m_modAttackSpeedPct[type])/1000.f;
-        botstring << "\n副手伤害: min: " << int32(unit->GetFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE)) << ", max: " << int32(unit->GetFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE));
-        botstring << "\n副手伤害加成: " << float(unit->GetPctModifierValue(UNIT_MOD_DAMAGE_OFFHAND, BASE_PCT)*unit->GetPctModifierValue(UNIT_MOD_DAMAGE_OFFHAND, TOTAL_PCT));
-        botstring << "\n副手攻击速度: " << float(attSpeed)
-            << " (" << float(((unit->GetFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE) + unit->GetFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE)) / 2) / attSpeed) << " DPS)";
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DMG_RANGE_OFFHAND) << ": " << LocalizedNpcText(player, BOT_TEXT_MIN) << ": " << int32(unit->GetFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE)) << ", " << LocalizedNpcText(player, BOT_TEXT_MAX) << ": " << int32(unit->GetFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE));
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DMG_MULT_OFFHAND) << ": " << float(unit->GetPctModifierValue(UNIT_MOD_DAMAGE_OFFHAND, BASE_PCT)*unit->GetPctModifierValue(UNIT_MOD_DAMAGE_OFFHAND, TOTAL_PCT));
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_ATTACK_TIME_OFFHAND) << ": " << float(attSpeed)
+            << " (" << float(((unit->GetFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE) + unit->GetFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE)) / 2) / attSpeed) << " " << LocalizedNpcText(player, BOT_TEXT_DPS) << ")";
     }
     if (unit != me ||
         (me->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 2) &&
@@ -1815,73 +1804,72 @@ void bot_ai::_listAuras(Player const* player, Unit const* unit) const
     {
         type = RANGED_ATTACK;
         attSpeed = (unit->GetAttackTime(type) * unit->m_modAttackSpeedPct[type])/1000.f;
-        botstring << "\n远程伤害: 最小: " << int32(unit->GetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE)) << ", 最大: " << int32(unit->GetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE));
-        botstring << "\n远程伤害加成: " << float(unit->GetPctModifierValue(UNIT_MOD_DAMAGE_RANGED, BASE_PCT)*unit->GetPctModifierValue(UNIT_MOD_DAMAGE_RANGED, TOTAL_PCT));
-        botstring << "\n远程攻击速度: " << float(attSpeed)
-            << " (" << float(((unit->GetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE) + unit->GetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE)) / 2) / attSpeed)
-            << " (" << float(unit->GetTypeId() == TYPEID_PLAYER ? unit->ToPlayer()->GetAmmoDPS() : unit->ToCreature()->GetCreatureAmmoDPS()) << " 弹药) DPS)";
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DMG_RANGE_RANGED) << ": " << LocalizedNpcText(player, BOT_TEXT_MIN) << ": " << int32(unit->GetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE)) << ", " << LocalizedNpcText(player, BOT_TEXT_MAX) << ": " << int32(unit->GetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE));
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DMG_MULT_RANGED) << ": " << float(unit->GetPctModifierValue(UNIT_MOD_DAMAGE_RANGED, BASE_PCT)*unit->GetPctModifierValue(UNIT_MOD_DAMAGE_RANGED, TOTAL_PCT));
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_ATTACK_TIME_RANGED) << ": " << float(attSpeed)
+            << " (" << float(((unit->GetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE) + unit->GetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE)) / 2) / attSpeed) << " " << LocalizedNpcText(player, BOT_TEXT_DPS) << ")";
     }
-    botstring << "\n基础生命值: " << int32(unit->GetCreateHealth());
-    botstring << "\n生命值上限: " << int32(unit->GetMaxHealth());
-    botstring << "\n基础法力值: " << int32(unit->GetCreateMana());
-    botstring << "\n法力值上限: " << int32(unit->GetMaxPower(POWER_MANA));
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_BASE_HP) << ": " << int32(unit->GetCreateHealth());
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_TOTAL_HP) << ": " << int32(unit->GetMaxHealth());
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_BASE_MP) << ": " << int32(unit->GetCreateMana());
+    botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_TOTAL_MP) << ": " << int32(unit->GetMaxPower(POWER_MANA));
     if (unit->GetMaxPower(POWER_MANA) > 1 && unit->GetPowerType() != POWER_MANA)
-        botstring << "\n当前法力值: " << int32(unit->GetPower(POWER_MANA));
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_CURR_MP) << ": " << int32(unit->GetPower(POWER_MANA));
 
     if (unit == me)
     {
-        botstring << "\n法术伤害加成: " << int32(me->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_MAGIC));
-        botstring << "\n每5秒回复生命值: " << int32(_getTotalBotStat(BOT_STAT_MOD_HEALTH_REGEN));
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_SPELLPOWER) << ": " << int32(me->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_MAGIC));
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_REGEN_HP) << ": " << int32(_getTotalBotStat(BOT_STAT_MOD_HEALTH_REGEN));
         if (me->GetMaxPower(POWER_MANA) > 1)
         {
-            botstring << "\n施放技能时每5秒回复法力值: " << float((_botclass == BOT_CLASS_SPHYNX ? -1.f : 1.f) * me->GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) * sWorld->getRate(RATE_POWER_MANA) * 5.0f);
-            botstring << "\n非施放技能时每5秒回复法力值: " << float((_botclass == BOT_CLASS_SPHYNX ? -1.f : 1.f) * me->GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * sWorld->getRate(RATE_POWER_MANA) * 5.0f);
+            botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_REGEN_MP_CAST) << ": " << float((_botclass == BOT_CLASS_SPHYNX ? -1.f : 1.f) * me->GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) * sWorld->getRate(RATE_POWER_MANA) * 5.0f);
+            botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_REGEN_MP_NOCAST) << ": " << float((_botclass == BOT_CLASS_SPHYNX ? -1.f : 1.f) * me->GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * sWorld->getRate(RATE_POWER_MANA) * 5.0f);
         }
-        botstring << "\n急速: " << (haste >= 0 ? "+" : "-") << float(haste) << " pct";
-        botstring << "\n命中: +" << float (hit) << " pct";
-        botstring << "\n专业: " << int32(expertise) << " (-" << float(float(expertise) * 0.25f) << " pct)";
-        botstring << "\n护甲穿透: " << float(me->GetCreatureArmorPenetrationCoef()) << " pct";
-        botstring << "\n法术穿透: " << uint32(spellpen);
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_HASTE) << ": " << (haste >= 0 ? "+" : "-") << float(haste) << " " << LocalizedNpcText(player, BOT_TEXT_PCT);
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_HIT) << ": +" << float(hit) << " " << LocalizedNpcText(player, BOT_TEXT_PCT);
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_EXPERTISE) << ": " << int32(expertise) << " (-" << float(float(expertise) * 0.25f) << " " << LocalizedNpcText(player, BOT_TEXT_PCT) << ")";
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_ARMOR_PEN) << ": " << float(me->GetCreatureArmorPenetrationCoef()) << " " << LocalizedNpcText(player, BOT_TEXT_PCT);
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_SPELL_PEN) << ": " << uint32(spellpen);
 
         for (uint8 i = SPELL_SCHOOL_HOLY; i != MAX_SPELL_SCHOOL; ++i)
         {
             uint32 curresist = me->GetResistance(SpellSchools(i)) + resistbonus[i-1];
 
-            const char* resist = nullptr;
+            std::string resist;
             switch (i)
             {
-            case 1: resist = "神圣";   break;
-            case 2: resist = "火焰";   break;
-            case 3: resist = "自然";   break;
-            case 4: resist = "冰霜";   break;
-            case 5: resist = "暗影";   break;
-            case 6: resist = "奥术";   break;
+                case 1: resist = LocalizedNpcText(player, BOT_TEXT_HOLY);   break;
+                case 2: resist = LocalizedNpcText(player, BOT_TEXT_FIRE);   break;
+                case 3: resist = LocalizedNpcText(player, BOT_TEXT_NATURE); break;
+                case 4: resist = LocalizedNpcText(player, BOT_TEXT_FROST);  break;
+                case 5: resist = LocalizedNpcText(player, BOT_TEXT_SHADOW); break;
+                case 6: resist = LocalizedNpcText(player, BOT_TEXT_ARCANE); break;
             }
-            botstring << "\n抗性 " << resist << ": " << uint32(curresist);
+            botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_RESISTANCE) << ": " << resist << ": " << uint32(curresist);
         }
-        botstring << "\n仆从命令状态:";
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_COMMAND_STATES) << ":";
         if (HasBotCommandState(BOT_COMMAND_FOLLOW))
-            botstring << " 跟随";
+            botstring << " " << LocalizedNpcText(player, BOT_TEXT_COMMAND_FOLLOW);
         if (HasBotCommandState(BOT_COMMAND_ATTACK))
-            botstring << " 攻击";
+            botstring << " " << LocalizedNpcText(player, BOT_TEXT_COMMAND_ATTACK);
         if (HasBotCommandState(BOT_COMMAND_STAY))
-            botstring << " 停留";
+            botstring << " " << LocalizedNpcText(player, BOT_TEXT_COMMAND_STAY);
         if (HasBotCommandState(BOT_COMMAND_COMBATRESET))
-            botstring << " 重置";
+            botstring << " " << LocalizedNpcText(player, BOT_TEXT_COMMAND_RESET);
         if (HasBotCommandState(BOT_COMMAND_FULLSTOP))
-            botstring << " 停止所有";
+            botstring << " " << LocalizedNpcText(player, BOT_TEXT_COMMAND_FULLSTOP);
         if (!IAmFree())
-            botstring << "\n跟随距离: " << uint32(master->GetBotMgr()->GetBotFollowDist());
+            botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_FOLLOW_DISTANCE) << ": " << uint32(master->GetBotMgr()->GetBotFollowDist());
 
         if (_botclass < BOT_CLASS_EX_START)
-            botstring << "\n特殊: " << uint32(_spec);
+            botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_SPEC) << ": " << uint32(_spec);
 
         //botstring << "\nBoot timer: %i", _bootTimer);
-        botstring << "\n分配职务: " << uint32(_roleMask & BOT_ROLE_MASK_MAIN);
-        botstring << "\n分配采集: " << uint32(_roleMask & BOT_ROLE_MASK_GATHERING);
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_BOT_ROLEMASK_MAIN) << ": " << uint32(_roleMask & BOT_ROLE_MASK_MAIN);
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_BOT_ROLEMASK_GATHERING) << ": " << uint32(_roleMask & BOT_ROLE_MASK_GATHERING);
 
-        botstring << "\nPvP 杀死: " << uint32(_pvpKillsCount) << ", 玩家: " << uint32(_playerKillsCount) << ", 合计: " << uint32(_killsCount);
-        botstring << "\n死亡 " << uint32(_deathsCount) << " 次";
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_PVP_KILLS) << ": " << uint32(_pvpKillsCount) << ", " << LocalizedNpcText(player, BOT_TEXT_PLAYERS) << ": " << uint32(_playerKillsCount) << ", " << LocalizedNpcText(player, BOT_TEXT_TOTAL) << ": " << uint32(_killsCount);
+        botstring << "\n" << LocalizedNpcText(player, BOT_TEXT_DIED_) << uint32(_deathsCount) << LocalizedNpcText(player, BOT_TEXT__TIMES);
 
         //debug
         //for (uint32 i = 0; i != 148; ++i)
@@ -3021,11 +3009,7 @@ void bot_ai::ReceiveEmote(Player* player, uint32 emote)
                 me->ClearUnitState(UNIT_STATE_FLEEING);
                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
             }
-            std::ostringstream msg;
-        msg << "%s (bot) 拉 "
-            << (me->GetGender() == GENDER_MALE ? "himself" : me->GetGender() == GENDER_FEMALE ? "herself" : "itself")
-            << " 到一起.";
-            me->TextEmote(msg.str().c_str());
+            me->TextEmote(LocalizedNpcText(player, BOT_TEXT_BOT_TICKLED).c_str());
             break;
         }
         default:
@@ -5256,7 +5240,7 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
 
     if (player->IsGameMaster())
     {
-        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<GM调试>", GOSSIP_SENDER_DEBUG, GOSSIP_ACTION_INFO_DEF + 1);
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_DEBUG), GOSSIP_SENDER_DEBUG, GOSSIP_ACTION_INFO_DEF + 1);
         menus = true;
     }
 
@@ -5292,18 +5276,18 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
             std::ostringstream message2;
             if (_botclass == BOT_CLASS_SPHYNX)
             {
-                message1 << "你确定要冒险引起 " << me->GetName() << "的注意?";
-                message2 << "<投入硬币>";
+                message1 << LocalizedNpcText(player, BOT_TEXT_HIREWARN_SPHYNX_1) << me->GetName() << LocalizedNpcText(player, BOT_TEXT_HIREWARN_SPHYNX_2);
+                message2 << LocalizedNpcText(player, BOT_TEXT_HIREOPTION_SPHYNX);
             }
             else if (_botclass == BOT_CLASS_DREADLORD)
             {
-                message1 << "你想引诱 " << me->GetName() << "跟着你?";
-                message2 << "<尝试诱惑恐惧领主>";
+                message1 << LocalizedNpcText(player, BOT_TEXT_HIREWARN_DREADLORD) << me->GetName() << '?';
+                message2 << LocalizedNpcText(player, BOT_TEXT_HIREOPTION_DREADLORD);
             }
             else
             {
-                message1 << "你想雇佣 " << me->GetName() << "为你的仆从?";
-                message2 << "<雇佣这个仆从>";
+                message1 << LocalizedNpcText(player, BOT_TEXT_HIREWARN_DEFAULT) << me->GetName() << '?';
+                message2 << LocalizedNpcText(player, BOT_TEXT_HIREOPTION_DEFAULT);
             }
 
             if (!reason)
@@ -5327,37 +5311,37 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
             menus = true;
 
             //general: equips, roles, distance, abilities, comsumables, group
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "[管理仆从 装备]", GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "[管理仆从 角色]", GOSSIP_SENDER_ROLES_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "[管理仆从 队形]", GOSSIP_SENDER_FORMATION, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "[管理仆从 技能]", GOSSIP_SENDER_ABILITIES, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_MANAGE_EQUIPMENT), GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_MANAGE_ROLES), GOSSIP_SENDER_ROLES_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_MANAGE_FORMATION), GOSSIP_SENDER_FORMATION, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_MANAGE_ABILITIES), GOSSIP_SENDER_ABILITIES, GOSSIP_ACTION_INFO_DEF + 1);
             if (_botclass < BOT_CLASS_EX_START)
             {
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "[管理仆从 天赋]", GOSSIP_SENDER_SPEC, GOSSIP_ACTION_INFO_DEF + 1);
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "给仆从提供消耗品", GOSSIP_SENDER_USEITEM, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_MANAGE_TALENTS), GOSSIP_SENDER_SPEC, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_GIVE_CONSUMABLE), GOSSIP_SENDER_USEITEM, GOSSIP_ACTION_INFO_DEF + 1);
             }
 
             if (!gr)
             {
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<创建队伍>", GOSSIP_SENDER_JOIN_GROUP, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_CREATE_GROUP), GOSSIP_SENDER_JOIN_GROUP, GOSSIP_ACTION_INFO_DEF + 1);
                 if (player->GetNpcBotsCount() > 1)
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<创建队伍 (所有仆从)>", GOSSIP_SENDER_JOIN_GROUP, GOSSIP_ACTION_INFO_DEF + 2);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_CREATE_GROUP_ALL), GOSSIP_SENDER_JOIN_GROUP, GOSSIP_ACTION_INFO_DEF + 2);
             }
             else if (!gr->IsMember(me->GetGUID()))
             {
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<加入队伍>", GOSSIP_SENDER_JOIN_GROUP, GOSSIP_ACTION_INFO_DEF + 1);
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<加入所有仆从到队伍>", GOSSIP_SENDER_JOIN_GROUP, GOSSIP_ACTION_INFO_DEF + 2);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_ADD_TO_GROUP), GOSSIP_SENDER_JOIN_GROUP, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_ADD_TO_GROUP_ALL), GOSSIP_SENDER_JOIN_GROUP, GOSSIP_ACTION_INFO_DEF + 2);
             }
             else
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<取消队伍邀请>", GOSSIP_SENDER_LEAVE_GROUP, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_REMOVE_FROM_GROUP), GOSSIP_SENDER_LEAVE_GROUP, GOSSIP_ACTION_INFO_DEF + 1);
 
             //movement toggle
             if (HasBotCommandState(BOT_COMMAND_MASK_UNMOVING))
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "跟着我", GOSSIP_SENDER_FOLLOWME, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_FOLLOW_ME), GOSSIP_SENDER_FOLLOWME, GOSSIP_ACTION_INFO_DEF + 1);
             if (!HasBotCommandState(BOT_COMMAND_STAY))
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "保持你的位置", GOSSIP_SENDER_HOLDPOSITION, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_HOLD_POSITION), GOSSIP_SENDER_HOLDPOSITION, GOSSIP_ACTION_INFO_DEF + 1);
             if (!HasBotCommandState(BOT_COMMAND_FULLSTOP))
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "待在这里，什么都不做", GOSSIP_SENDER_DONOTHING, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_STAY_HERE), GOSSIP_SENDER_DONOTHING, GOSSIP_ACTION_INFO_DEF + 1);
         }
         if (player == master || (gr && gr->IsMember(master->GetGUID())))
         {
@@ -5367,10 +5351,10 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
             {
                 case BOT_CLASS_MAGE:
                 {
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要魔法食物", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 1);
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要魔法水", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
-                if (me->GetLevel() >= 70)
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要一张魔法餐桌", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 3);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_MAGE_FOOD), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 1);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_MAGE_DRINK), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
+                    if (me->GetLevel() >= 70)
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_MAGE_TABLE), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 3);
                     menus = true;
                     break;
                 }
@@ -5381,7 +5365,7 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
                     if (me->GetLevel() >= 16/* && !player->HasSkill(SKILL_LOCKPICKING)*/)
                     {
                         std::ostringstream msg;
-                        msg << "帮我开一个锁 (技能等级" << uint32(me->GetLevel() * 5) << ")";
+                        msg << LocalizedNpcText(player, BOT_TEXT_ROGUE_PICKLOCK) << " (" << uint32(me->GetLevel() * 5) << ")";
                         AddGossipItemFor(player, GOSSIP_ICON_CHAT, msg.str().c_str(), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 1);
                         menus = true;
                     }
@@ -5389,9 +5373,9 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
                 }
                 case BOT_CLASS_WARLOCK:
                 {
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要你的治疗石", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 1);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_WARLOCK_HEALTHSTONE), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 1);
                     if (me->GetLevel() >= 68)
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要一个灵魂之井", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 3);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_WARLOCK_SOULWELL), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 3);
                     menus = true;
                     break;
                 }
@@ -5408,11 +5392,11 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
                 {
                     if (me->GetLevel() >= 20)
                     {
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我想要你更换毒药附魔", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
-                        AddGossipItemFor(player, GOSSIP_ICON_TALK, "<更换毒药 (主手)>", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 3);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_ROGUE_POISON_REFRESH), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
+                        AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_ROGUE_POISON_MH), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 3);
                         Item const* oweap = _equips[BOT_SLOT_OFFHAND];
                         if (oweap && oweap->GetTemplate()->Class == ITEM_CLASS_WEAPON)
-                            AddGossipItemFor(player, GOSSIP_ICON_TALK, "<更换毒药 (副手)>", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 4);
+                            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_ROGUE_POISON_OH), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 4);
                     }
                     break;
                 }
@@ -5420,32 +5404,32 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
                 {
                     if (me->GetLevel() >= 10)
                     {
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要你更换武器附魔", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
-                        AddGossipItemFor(player, GOSSIP_ICON_TALK, "<更换附魔 (主手)>", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 3);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_SHAMAN_ENCH_REFRESH), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
+                        AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SHAMAN_ENCH_MH), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 3);
                         Item const* oweap = _equips[BOT_SLOT_OFFHAND];
                         if (oweap && oweap->GetTemplate()->Class == ITEM_CLASS_WEAPON)
-                            AddGossipItemFor(player, GOSSIP_ICON_TALK, "<更换附魔 (副手)>", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 4);
+                            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SHAMAN_ENCH_OH), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 4);
                     }
                     if (me->GetShapeshiftForm() != FORM_NONE)
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要你取消变形", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 5);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_REMOVE_SHAPESHIFT), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 5);
                     break;
                 }
                 case BOT_CLASS_DRUID:
                 {
                     if (me->GetShapeshiftForm() != FORM_NONE)
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "我需要你取消变形", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 1);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_REMOVE_SHAPESHIFT), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 1);
                     break;
                 }
                 case BOT_CLASS_HUNTER:
                 {
                     if (me->GetLevel() >= 10)
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<选择宠物类型>", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_CHOOSE_PET_TYPE), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
 
                     break;
                 }
                 case BOT_CLASS_WARLOCK:
                 {
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<选择宠物类型", GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_CHOOSE_PET_TYPE), GOSSIP_SENDER_CLASS, GOSSIP_ACTION_INFO_DEF + 2);
                     break;
                 }
                 default:
@@ -5453,18 +5437,18 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
             }
 
             std::ostringstream astr;
-            astr << "你打算解雇你的仆从 " << me->GetName() << "? 你可能会后悔的...";
-            player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_TAXI, "你被解雇了",
+            astr << LocalizedNpcText(player, BOT_TEXT_ABANDON_WARN_1) << me->GetName() << "? " << LocalizedNpcText(player, BOT_TEXT_ABANDON_WARN_2);
+            player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_TAXI, LocalizedNpcText(player, BOT_TEXT_UR_DISMISSED),
                 GOSSIP_SENDER_DISMISS, GOSSIP_ACTION_INFO_DEF + 1, astr.str().c_str(), 0, false);
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "振作起来，该死的", GOSSIP_SENDER_TROUBLESHOOTING, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_PULL_URSELF), GOSSIP_SENDER_TROUBLESHOOTING, GOSSIP_ACTION_INFO_DEF + 1);
         }
     }
 
     if (_botclass >= BOT_CLASS_EX_START)
     {
         menus = true;
-        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<研究这个生物>", GOSSIP_SENDER_SCAN, GOSSIP_ACTION_INFO_DEF + 1);
+        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_STUDY_CREATURE), GOSSIP_SENDER_SCAN, GOSSIP_ACTION_INFO_DEF + 1);
     }
 
     if (!menus)
@@ -5473,7 +5457,7 @@ bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
         return true;
     }
 
-    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "没有什么事了", 0, GOSSIP_ACTION_INFO_DEF + 1);
+    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_NEVERMIND), 0, GOSSIP_ACTION_INFO_DEF + 1);
     player->PlayerTalkClass->SendGossipMenu(gossipTextId, me->GetGUID());
     return true;
 }
@@ -5566,12 +5550,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         }
                         if (!food)
                         {
-                            std::string errorstr = "我还没有学会制造 ";
-                            errorstr += iswater ? "水" : "食物";
-                            errorstr += " 的魔法";
-                            BotWhisper(errorstr.c_str(), player);
-                            //player->PlayerTalkClass->ClearMenus();
-                            //return OnGossipHello(player, me);
+                            BotWhisper(LocalizedNpcText(player, iswater ? BOT_TEXT_CANT_CONJURE_WATER_YET : BOT_TEXT_CANT_CONJURE_FOOD_YET), player);
                             break;
                         }
                         SpellInfo const* Info = sSpellMgr->GetSpellInfo(food);
@@ -5583,13 +5562,13 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         {
                             foodspell->finish(false);
                             delete foodspell;
-                            BotWhisper("我现在办不到", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_CANT_RIGHT_NOW), player);
                         }
                         else
                         {
                             aftercastTargetGuid = player->GetGUID();
                             foodspell->prepare(targets);
-                            BotWhisper("拿去吧,这个给你...", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_HERE_YOU_GO), player);
                         }
                         break;
                     }
@@ -5598,19 +5577,19 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         uint32 tableSpellId = GetSpell(43987); //Ritual of Refreshment
                         if (!tableSpellId)
                         {
-                            BotWhisper("技能被禁用", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_DISABLED), player);
                             break;
                         }
                         if (!IsSpellReady(43987, GetLastDiff(), false))
                         {
-                            BotWhisper("技能还没准备好", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_NOT_READY_YET), player);
                             break;
                         }
                         uint32 tableGOForSpell = (tableSpellId == 43987 ? GO_REFRESHMENT_TABLE_1 : GO_REFRESHMENT_TABLE_2);
                         GameObjectTemplate const* goInfo = sObjectMgr->GetGameObjectTemplate(tableGOForSpell);
                         if (!goInfo)
                         {
-                            BotWhisper("无效的对象类型", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_INVALID_OBJECT_TYPE), player);
                             break;
                         }
                         float x,y,z;
@@ -5622,7 +5601,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                             me->GetPhaseMask(), Position(x,y,z,me->GetOrientation()), rot, 255, GO_STATE_READY))
                         {
                             delete table;
-                            BotWhisper("创造一张魔法餐桌失败", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_FAILED), player);
                             break;
                         }
 
@@ -5634,7 +5613,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         table->SetSpellId(tableSpellId);
                         me->GetMap()->AddToMap(table);
 
-                        BotWhisper("完成了", player);
+                        BotWhisper(LocalizedNpcText(player, BOT_TEXT_DONE), player);
                         break;
                     }
                     break;
@@ -5660,7 +5639,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         if (obj)
                         {
                             std::ostringstream msg;
-                            msg << obj->GetGOInfo()->name << " (距离 = " << player->GetExactDist(obj) << ")";
+                            msg << obj->GetGOInfo()->name << " (" << LocalizedNpcText(player, BOT_TEXT_DISTANCE_SHORT) << " = " << player->GetExactDist(obj) << ")";
                             AddGossipItemFor(player, GOSSIP_ICON_CHAT, msg.str().c_str(), GOSSIP_SENDER_CLASS_ACTION, GOSSIP_ACTION_INFO_DEF + ++count);
                         }
 
@@ -5722,7 +5701,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                             }
                         }
 
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + ++count);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + ++count);
                     }
                     else if (action == 2)
                     {
@@ -5747,8 +5726,8 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, spellName, GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + possiblePoison);
                             }
                         }
-                        AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + 0);
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+                        AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_AUTO), GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + 0);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
                     }
                     else if (action == 4)
                     {
@@ -5768,8 +5747,8 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, spellName, GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + possiblePoison);
                             }
                         }
-                        AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + 0);
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+                        AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_AUTO), GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + 0);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
                     }
 
                     break;
@@ -5801,8 +5780,8 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, spellName, GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + possibleEnchant);
                             }
                         }
-                        AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + 0);
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+                        AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_AUTO), GOSSIP_SENDER_CLASS_ACTION2, GOSSIP_ACTION_INFO_DEF + 0);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
                     }
                     else if (action == 4)
                     {
@@ -5822,14 +5801,14 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 AddGossipItemFor(player, same ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, spellName, GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + possibleEnchant);
                             }
                         }
-                        AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + 0);
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+                        AddGossipItemFor(player, isauto ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_AUTO), GOSSIP_SENDER_CLASS_ACTION3, GOSSIP_ACTION_INFO_DEF + 0);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
                     }
                     else if (action == 5)
                     {
                         if (me->GetShapeshiftForm() == FORM_NONE)
                         {
-                            BotWhisper("我没有变形", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_NOT_SHAPESHIFTED), player);
                             break;
                         }
                         removeShapeshiftForm();
@@ -5858,17 +5837,17 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                                 std::string name;
                                 if (possibleType == BOT_PET_CUNNING_START)
                                 {
-                                    name = "召唤随机宠物 (狡诈型)";
+                                    name = LocalizedNpcText(player, BOT_TEXT_RANDOMPET_CUNNING);
                                     possibleType = urand(BOT_PET_CUNNING_START, BOT_PET_CUNNING_END);
                                 }
                                 else if (possibleType == BOT_PET_FEROCITY_START)
                                 {
-                                    name = "召唤随机宠物 (残暴型)";
+                                    name = LocalizedNpcText(player, BOT_TEXT_RANDOMPET_FEROCITY);
                                     possibleType = urand(BOT_PET_FEROCITY_START, BOT_PET_FEROCITY_END);
                                 }
                                 else if (possibleType == BOT_PET_TENACITY_START)
                                 {
-                                    name = "召唤随机宠物 (坚韧型)";
+                                    name = LocalizedNpcText(player, BOT_TEXT_RANDOMPET_TENACITY);
                                     possibleType = urand(BOT_PET_TENACITY_START, BOT_PET_TENACITY_END);
                                 }
                                 else
@@ -5882,9 +5861,9 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                             }
                         }
                         bool noPet = curType == BOT_PET_INVALID;
-                        AddGossipItemFor(player, noPet ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<解散宠物>", GOSSIP_SENDER_CLASS_ACTION4, GOSSIP_ACTION_INFO_DEF + BOT_PET_INVALID);
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION4, GOSSIP_ACTION_INFO_DEF + 0);
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+                        AddGossipItemFor(player, noPet ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_NONE2), GOSSIP_SENDER_CLASS_ACTION4, GOSSIP_ACTION_INFO_DEF + BOT_PET_INVALID);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_AUTO), GOSSIP_SENDER_CLASS_ACTION4, GOSSIP_ACTION_INFO_DEF + 0);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
                     }
                     break;
                 }
@@ -5913,15 +5892,15 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                             }
                         }
                         bool noPet = curType == BOT_PET_INVALID;
-                        AddGossipItemFor(player, noPet ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "<解散宠物>", GOSSIP_SENDER_CLASS_ACTION4, GOSSIP_ACTION_INFO_DEF + BOT_PET_INVALID);
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<自动>", GOSSIP_SENDER_CLASS_ACTION4, GOSSIP_ACTION_INFO_DEF + 0);
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+                        AddGossipItemFor(player, noPet ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_NONE2), GOSSIP_SENDER_CLASS_ACTION4, GOSSIP_ACTION_INFO_DEF + BOT_PET_INVALID);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_AUTO), GOSSIP_SENDER_CLASS_ACTION4, GOSSIP_ACTION_INFO_DEF + 0);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
                     }
                     else if (action == 1)
                     {
                         if (GetAIMiscValue(6201) == 0)
                         {
-                            BotWhisper("我没有治疗石", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_NO_HEALTHSTONE), player);
                             break;
                         }
 
@@ -5937,7 +5916,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         SpellInfo const* spellInfo = spellId ? sSpellMgr->GetSpellInfo(spellId) : nullptr;
                         if (!spellInfo)
                         {
-                            BotWhisper("我还不能制造治疗石!", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_CANT_CREATE_HEALTHSTONE), player);
                             break;
                         }
 
@@ -5972,19 +5951,19 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         uint32 wellSpellId = GetSpell(29893); //Ritual of Souls
                         if (!wellSpellId)
                         {
-                            BotWhisper("技能被禁用", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_DISABLED), player);
                             break;
                         }
                         if (!IsSpellReady(29893, GetLastDiff(), false))
                         {
-                            BotWhisper("技能还没准备好", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_NOT_READY_YET), player);
                             break;
                         }
                         uint32 wellGOForSpell = (wellSpellId == 29893 ? GO_SOULWELL_1 : GO_SOULWELL_2);
                         GameObjectTemplate const* goInfo = sObjectMgr->GetGameObjectTemplate(wellGOForSpell);
                         if (!goInfo)
                         {
-                            BotWhisper("无效的对象类型", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_INVALID_OBJECT_TYPE), player);
                             break;
                         }
                         float x,y,z;
@@ -5995,7 +5974,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         if (!soulwell->Create(me->GetMap()->GenerateLowGuid<HighGuid::GameObject>(), wellGOForSpell, me->GetMap(),
                             me->GetPhaseMask(), Position(x,y,z,me->GetOrientation()), rot, 255, GO_STATE_READY))                        {
                             delete soulwell;
-                            BotWhisper("制造灵魂之井失败", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_FAILED), player);
                             break;
                         }
 
@@ -6007,7 +5986,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         soulwell->SetSpellId(wellSpellId);
                         me->GetMap()->AddToMap(soulwell);
 
-                        BotWhisper("完成了", player);
+                        BotWhisper(LocalizedNpcText(player, BOT_TEXT_DONE), player);
                         break;
                     }
                     break;
@@ -6021,7 +6000,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                     }
                     if (me->GetShapeshiftForm() == FORM_NONE)
                     {
-                        BotWhisper("我没有变形", player);
+                        BotWhisper(LocalizedNpcText(player, BOT_TEXT_NOT_SHAPESHIFTED), player);
                         break;
                     }
 
@@ -6046,7 +6025,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                         uint32 picklock = InitSpell(me, 1804);
                         if (!picklock)
                         {
-                            BotWhisper("见鬼，我又不会开锁!", player);
+                            BotWhisper(LocalizedNpcText(player, BOT_TEXT_NO_LOCKPICKING), player);
                             break;
                         }
 
@@ -6119,9 +6098,9 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                             lockpickspell->finish(false);
                             delete lockpickspell;
                             if (result == SPELL_FAILED_LOW_CASTLEVEL)
-                                BotWhisper("我的技能等级还不够", player);
+                                BotWhisper(LocalizedNpcText(player, BOT_TEXT_SKILL_LEVEL_TOO_LOW), player);
                             else
-                                BotWhisper("失败", player);
+                                BotWhisper(LocalizedNpcText(player, BOT_TEXT_FAILED), player);
                         }
                         else
                         {
@@ -6208,46 +6187,45 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             subMenu = true;
 
             //general
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "给我看看你的装备信息", GOSSIP_SENDER_EQUIPMENT_LIST, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_SHOW_INVENTORY), GOSSIP_SENDER_EQUIPMENT_LIST, GOSSIP_ACTION_INFO_DEF + 1);
 
             //auto-equip
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "自动穿戴可用装备", GOSSIP_SENDER_EQUIP_AUTOEQUIP, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_AUTOEQUIP) + "...", GOSSIP_SENDER_EQUIP_AUTOEQUIP, GOSSIP_ACTION_INFO_DEF + 1);
 
             //weapons
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "主手武器", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_MAINHAND);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_MH) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_MAINHAND);
             if (_canUseOffHand())
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "副手武器", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_OFFHAND);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_OH) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_OFFHAND);
             if (_canUseRanged())
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "远程武器", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_RANGED);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_RH) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_RANGED);
             if (_canUseRelic())
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "圣物", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_RANGED);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_RELIC) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_RANGED);
 
             //armor
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "头部", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_HEAD);
-        AddGossipItemFor(player, GOSSIP_ICON_TALK, "肩部", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_SHOULDERS);
-        AddGossipItemFor(player, GOSSIP_ICON_TALK, "胸部", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_CHEST);
-        AddGossipItemFor(player, GOSSIP_ICON_TALK, "腰部", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_WAIST);
-        AddGossipItemFor(player, GOSSIP_ICON_TALK, "腿部", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_LEGS);
-        AddGossipItemFor(player, GOSSIP_ICON_TALK, "脚", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_FEET);
-        AddGossipItemFor(player, GOSSIP_ICON_TALK, "手腕", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_WRIST);
-        AddGossipItemFor(player, GOSSIP_ICON_TALK, "手", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_HANDS);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_HEAD) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_HEAD);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_SHOULDERS) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_SHOULDERS);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_CHEST) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_CHEST);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_WAIST) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_WAIST);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_LEGS) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_LEGS);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_FEET) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_FEET);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_WRIST) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_WRIST);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_HANDS) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_HANDS);
 
             if (IsHumanoidClass(_botclass))
             {
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "背部", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_BACK);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "衬衣", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_BODY);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "戒指1", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_FINGER1);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "戒指2", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_FINGER2);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "饰品1", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_TRINKET1);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "饰品2", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_TRINKET2);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "颈部", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_NECK);
-        
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_BACK) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_BACK);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_SHIRT) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_BODY);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_FINGER1) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_FINGER1);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_FINGER2) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_FINGER2);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_TRINKET1) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_TRINKET1);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_TRINKET2) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_TRINKET2);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_SLOT_NECK) + "...", GOSSIP_SENDER_EQUIPMENT_SHOW, GOSSIP_ACTION_INFO_DEF + BOT_SLOT_NECK);
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "卸下全部装备", GOSSIP_SENDER_UNEQUIP_ALL, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_UNEQUIP_ALL), GOSSIP_SENDER_UNEQUIP_ALL, GOSSIP_ACTION_INFO_DEF + 1);
             if (creature->GetCreatureTemplate()->unit_flags2 & UNIT_FLAG2_MIRROR_IMAGE)
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "刷新外观显示", GOSSIP_SENDER_MODEL_UPDATE, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_UPDATE_VISUAL), GOSSIP_SENDER_MODEL_UPDATE, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
 
             break;
         }
@@ -6258,7 +6236,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
 
             int8 id = 1;
             EquipmentInfo const* einfo = sObjectMgr->GetEquipmentInfo(me->GetEntry(), id);
-            ASSERT(einfo && "试图查看装备列表,但仆从没有装备信息!");
+            ASSERT(einfo && "Trying to send equipment list for bot with no equip info!");
 
             for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
             {
@@ -6269,8 +6247,8 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 //uncomment if needed
                 //msg << " in slot " << uint32(i) << " (" << _getNameForSlot(i + 1) << ')';
                 if (i <= BOT_SLOT_RANGED && einfo->ItemEntry[i] == item->GetEntry())
-                    msg << " |cffe6cc80|h[!外观可显示!]|h|r";
-                BotWhisper(msg.str().c_str(), player);
+                    msg << " |cffe6cc80|h[!" << LocalizedNpcText(player, BOT_TEXT_VISUALONLY) << "!]|h|r";
+                BotWhisper(msg.str(), player);
             }
 
             break;
@@ -6282,7 +6260,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
 
             int8 id = 1;
             EquipmentInfo const* einfo = sObjectMgr->GetEquipmentInfo(me->GetEntry(), id);
-            ASSERT(einfo && "试图查看装备物品,但仆从没有装备信息!");
+            ASSERT(einfo && "Trying to send equipment info for bot with no equip info!");
 
             uint8 slot = action - GOSSIP_ACTION_INFO_DEF;
             Item const* item = _equips[slot];
@@ -6292,9 +6270,9 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             _AddItemLink(player, item, msg, false);
 
             if (slot <= BOT_SLOT_RANGED && einfo->ItemEntry[slot] == item->GetEntry())
-                msg << " |cffe6cc80|h[!外观可显示!]|h|r";
+                msg << " |cffe6cc80|h[!" << LocalizedNpcText(player, BOT_TEXT_VISUALONLY) << "!]|h|r";
 
-            BotWhisper(msg.str().c_str(), player);
+            BotWhisper(msg.str(), player);
 
             //break; //no break here - return to menu
             [[fallthrough]];
@@ -6305,7 +6283,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
 
             int8 id = 1;
             EquipmentInfo const* einfo = sObjectMgr->GetEquipmentInfo(me->GetEntry(), id);
-            ASSERT(einfo && "试图展示装备物品,但仆从没有装备信息!");
+            ASSERT(einfo && "Trying to send equipment show for bot with no equip info!");
 
             std::set<uint32> itemList, idsList;
 
@@ -6373,18 +6351,18 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             //s2.2.0 add current item (with return)
             uint8 slot = action - GOSSIP_ACTION_INFO_DEF;
             std::ostringstream str;
-            str << "装备: ";
+            str << LocalizedNpcText(player, BOT_TEXT_EQUIPPED) << ": ";
             if (Item const* item = _equips[slot])
             {
                 _AddItemLink(player, item, str);
                 if (slot <= BOT_SLOT_RANGED && einfo->ItemEntry[slot] == item->GetEntry())
-                    str << " |cffe6cc80|h[!外观可显示!]|h|r";
+                    str << " |cffe6cc80|h[!" << LocalizedNpcText(player, BOT_TEXT_VISUALONLY) << "!]|h|r";
 
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, str.str().c_str(), GOSSIP_SENDER_EQUIPMENT_INFO, action);
             }
             else
             {
-                str << "没有什么";
+                str << LocalizedNpcText(player, BOT_TEXT_NOTHING);
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, str.str().c_str(), GOSSIP_SENDER_EQUIPMENT_SHOW, action);
             }
 
@@ -6394,20 +6372,20 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 if (slot <= BOT_SLOT_RANGED)
                 {
                     if (einfo->ItemEntry[slot] != 0)
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "使用你的旧装备", GOSSIP_SENDER_EQUIP_RESET, action);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_USE_OLD_EQUIPMENT), GOSSIP_SENDER_EQUIP_RESET, action);
                     else
-                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, "卸下这件装备", GOSSIP_SENDER_UNEQUIP, action);
+                        AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_UNEQUIP), GOSSIP_SENDER_UNEQUIP, action);
                 }
 
                 //s2.2.2 add unequip option for non-weapons
                 if (slot > BOT_SLOT_RANGED)
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "卸下这件装备", GOSSIP_SENDER_UNEQUIP, action);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_UNEQUIP), GOSSIP_SENDER_UNEQUIP, action);
             }
 
             //s2.2.3a: add an empty submenu with info if no items are found
             if (itemList.empty())
             {
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "嗯...我没什么可给你的", 0, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_NOTHING_TO_GIVE), 0, GOSSIP_ACTION_INFO_DEF + 1);
             }
             else
             {
@@ -6464,7 +6442,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 }
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 2);
 
             //TC_LOG_ERROR("entities.player", "OnGossipSelect(bot): added %u item(s) to list of %s (requester: %s)",
             //    counter, me->GetName().c_str(), player->GetName().c_str());
@@ -6564,7 +6542,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
 
             int8 id = 1;
             EquipmentInfo const* einfo = sObjectMgr->GetEquipmentInfo(me->GetEntry(), id);
-            ASSERT(einfo && "试图自动装备物品,但没有装备!");
+            ASSERT(einfo && "Trying to send auto-equip for bot with no equip info!");
 
             std::set<uint32> itemList, idsList;
 
@@ -6653,7 +6631,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
 
             if (itemList.empty())
             {
-                AddGossipItemFor(player, GOSSIP_ICON_CHAT, "嗯...我没什么可给你的", 0, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_NOTHING_TO_GIVE), 0, GOSSIP_ACTION_INFO_DEF + 1);
             }
             else
             {
@@ -6737,7 +6715,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 }
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), GOSSIP_SENDER_EQUIPMENT, GOSSIP_ACTION_INFO_DEF + 2);
             break;
         }
         case GOSSIP_SENDER_EQUIP_RESET: //equips change s4a: reset equipment
@@ -6817,7 +6795,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             subMenu = true;
 
             if (IsHumanoidClass(_botclass))
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "采集", GOSSIP_SENDER_ROLES_GATHERING, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_GATHERING) + "...", GOSSIP_SENDER_ROLES_GATHERING, GOSSIP_ACTION_INFO_DEF + 1);
 
             uint16 role = BOT_ROLE_TANK;
             for (; role != BOT_MAX_ROLE; role <<= 1)
@@ -6830,7 +6808,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 AddGossipItemFor(player, GetRoleIcon(role), GetRoleString(role), GOSSIP_SENDER_ROLES_MAIN_TOGGLE, GOSSIP_ACTION_INFO_DEF + role);
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
 
             break;
         }
@@ -6854,7 +6832,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 AddGossipItemFor(player, GetRoleIcon(role), GetRoleString(role), GOSSIP_SENDER_ROLES_GATHERING_TOGGLE, GOSSIP_ACTION_INFO_DEF + role);
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", GOSSIP_SENDER_ROLES_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), GOSSIP_SENDER_ROLES_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
 
             break;
         }
@@ -6874,8 +6852,8 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             subMenu = true;
 
             if (HasAbilitiesSpecifics())
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "技能状态", GOSSIP_SENDER_ABILITIES_SPECIFICS_LIST, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_ICON_TALK, "管理可使用的技能", GOSSIP_SENDER_ABILITIES_USAGE_LIST, GOSSIP_ACTION_INFO_DEF + 2);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_ABILITIES_STATUS) + "...", GOSSIP_SENDER_ABILITIES_SPECIFICS_LIST, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_ALLOWED_ABILITIES) + "...", GOSSIP_SENDER_ABILITIES_USAGE_LIST, GOSSIP_ACTION_INFO_DEF + 2);
 
             uint32 basespell;
             SpellInfo const* spellInfo;
@@ -6888,13 +6866,13 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 spellInfo = sSpellMgr->GetSpellInfo(basespell); //always valid
 
                 std::ostringstream name;
-                name << "施放 ";
+                name << LocalizedNpcText(player, BOT_TEXT_USE_);
                 _AddSpellLink(player, spellInfo, name);
                 AddGossipItemFor(player, GOSSIP_ICON_TRAINER, name.str().c_str(), GOSSIP_SENDER_ABILITIES_USE, GOSSIP_ACTION_INFO_DEF + basespell);
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "刷新", sender, action);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_UPDATE), sender, action);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 2);
 
             break;
         }
@@ -6903,11 +6881,11 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             subMenu = true;
 
             std::list<std::string> specList;
-            FillAbilitiesSpecifics(specList);
+            FillAbilitiesSpecifics(player, specList);
             for (std::list<std::string>::const_iterator itr = specList.begin(); itr != specList.end(); ++itr)
                 AddGossipItemFor(player, GOSSIP_ICON_CHAT, *itr, GOSSIP_SENDER_ABILITIES, GOSSIP_ACTION_INFO_DEF);
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", GOSSIP_SENDER_ABILITIES, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), GOSSIP_SENDER_ABILITIES, GOSSIP_ACTION_INFO_DEF + 1);
 
             break;
         }
@@ -7006,7 +6984,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 }
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", GOSSIP_SENDER_ABILITIES_USAGE_LIST, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), GOSSIP_SENDER_ABILITIES_USAGE_LIST, GOSSIP_ACTION_INFO_DEF + 2);
             break;
         }
         case GOSSIP_SENDER_ABILITIES_USAGE_LIST:
@@ -7014,15 +6992,15 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             subMenu = true;
 
             if (GetDamagingSpellsList())
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "物理", GOSSIP_SENDER_ABILITIES_USAGE_LIST_DAMAGE, GOSSIP_ACTION_INFO_DEF + 1);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_DAMAGE) + "...", GOSSIP_SENDER_ABILITIES_USAGE_LIST_DAMAGE, GOSSIP_ACTION_INFO_DEF + 1);
             if (GetCCSpellsList())
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "法术", GOSSIP_SENDER_ABILITIES_USAGE_LIST_CC, GOSSIP_ACTION_INFO_DEF + 2);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_CONTROL) + "...", GOSSIP_SENDER_ABILITIES_USAGE_LIST_CC, GOSSIP_ACTION_INFO_DEF + 2);
             if (GetHealingSpellsList())
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "治疗", GOSSIP_SENDER_ABILITIES_USAGE_LIST_HEAL, GOSSIP_ACTION_INFO_DEF + 3);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_HEAL) + "...", GOSSIP_SENDER_ABILITIES_USAGE_LIST_HEAL, GOSSIP_ACTION_INFO_DEF + 3);
             if (GetSupportSpellsList())
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "其它", GOSSIP_SENDER_ABILITIES_USAGE_LIST_SUPPORT, GOSSIP_ACTION_INFO_DEF + 4);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_OTHER) + "...", GOSSIP_SENDER_ABILITIES_USAGE_LIST_SUPPORT, GOSSIP_ACTION_INFO_DEF + 4);
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", GOSSIP_SENDER_ABILITIES, GOSSIP_ACTION_INFO_DEF + 5);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), GOSSIP_SENDER_ABILITIES, GOSSIP_ACTION_INFO_DEF + 5);
             break;
         }
         case GOSSIP_SENDER_SPEC_SET:
@@ -7033,9 +7011,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             {
                 _newspec = newSpec;
                 me->CastSpell(me, ACTIVATE_SPEC, false);
-                std::ostringstream specMsg;
-                specMsg << "改变我的天赋专精为 " << BotTalentSpecStrings[_newspec-1];
-                BotWhisper(specMsg.str().c_str());
+                BotWhisper(LocalizedNpcText(player, BOT_TEXT_CHANGING_MY_SPEC_TO_) + LocalizedNpcText(player, TextForSpec(_newspec)));
                 break;
             }
             [[fallthrough]];
@@ -7065,11 +7041,10 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             for (uint8 i = specIndex; i < specIndex + 3; ++i)
             {
                 uint8 icon = (_spec == i) ? BOT_ICON_ON : BOT_ICON_OFF;
-                std::string specName = BotTalentSpecStrings[i-1];
-                AddGossipItemFor(player, icon, specName.c_str(), GOSSIP_SENDER_SPEC_SET, GOSSIP_ACTION_INFO_DEF + i);
+                AddGossipItemFor(player, icon, LocalizedNpcText(player, TextForSpec(i)), GOSSIP_SENDER_SPEC_SET, GOSSIP_ACTION_INFO_DEF + i);
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 2);
             break;
         }
         case GOSSIP_SENDER_USEITEM_USE:
@@ -7186,8 +7161,8 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 }
             }
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "刷新", sender, action);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_UPDATE), sender, action);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
 
             break;
         }
@@ -7207,51 +7182,50 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                     //    ostr << "unknown (" << _ownerGuid << ')';
                     //BotWhisper(ostr.str().c_str(), player);
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s 在我的雇主解雇我之前，我是不会加入你 %s", me->GetName().c_str(), (me->GetGender() == GENDER_MALE ? "him" : "her"));
+                    ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_OWNED).c_str(), me->GetName().c_str());
                     break;
                 }
 
                 if (_botclass == BOT_CLASS_DEATH_KNIGHT && player->GetLevel() < 55)
                 {
-                    BotWhisper("走开，懦夫", player);
+                    BotWhisper(LocalizedNpcText(player, BOT_TEXT_HIREDENY_DK), player);
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s 在你55级之前不会加入你", me->GetName().c_str());
+                    ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_LVL55).c_str(), me->GetName().c_str());
                     break;
                 }
                 if (_botclass == BOT_CLASS_SPHYNX && player->GetLevel() < 60)
                 {
-                    std::string msg1 = me->GetName() + " 不相信" + player->GetName() + "的行为";
-                    me->TextEmote(msg1.c_str());
+                    me->TextEmote((me->GetName() + LocalizedNpcText(player, BOT_TEXT_HIREDENY_SPHYNX)).c_str());
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s 在你60级之前不会加入你", me->GetName().c_str());
+                    ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_LVL60).c_str(), me->GetName().c_str());
                     break;
                 }
                 if (_botclass == BOT_CLASS_ARCHMAGE && player->GetLevel() < 20)
                 {
-                    BotWhisper("I我不会把时间浪费在任何事情上", player);
+                    BotWhisper(LocalizedNpcText(player, BOT_TEXT_HIREDENY_ARCHMAGE), player);
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s 20级以后才能加入", me->GetName().c_str());
+                    ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_LVL20).c_str(), me->GetName().c_str());
                     break;
                 }
                 if (_botclass == BOT_CLASS_DREADLORD && player->GetLevel() < 60)
                 {
                     //BotWhisper("placeholder", player);
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s 在你60级之前不会加入你", me->GetName().c_str());
+                    ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_LVL60).c_str(), me->GetName().c_str());
                     break;
                 }
                 if (_botclass == BOT_CLASS_SPELLBREAKER && player->GetLevel() < 20)
                 {
                     //BotWhisper("placeholder", player);
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s 20级以后才能加入", me->GetName().c_str());
+                    ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_LVL20).c_str(), me->GetName().c_str());
                     break;
                 }
                 if (_botclass == BOT_CLASS_DARK_RANGER && player->GetLevel() < 40)
                 {
                     //BotWhisper("placeholder", player);
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s 在你40级之前不会加入你", me->GetName().c_str());
+                    ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_LVL40).c_str(), me->GetName().c_str());
                     break;
                 }
 
@@ -7259,11 +7233,11 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 {
                     if (_botclass == BOT_CLASS_SPHYNX)
                     {
-                        std::string msg1 = me->GetName() + " 发出摩拳擦掌声并开始跟随 " + player->GetName();
+                        std::string msg1 = me->GetName() + LocalizedNpcText(player, BOT_TEXT_HIRE_EMOTE_SPHYNX) + player->GetName();
                         me->TextEmote(msg1.c_str());
                     }
                     else
-                        BotWhisper("我准备好了...", player);
+                        BotWhisper(LocalizedNpcText(player, BOT_TEXT_HIRE_SUCCESS), player);
                 }
                 else
                     BotSay("...", player);
@@ -7273,7 +7247,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 me->SetFaction(14);
                 if (botPet)
                     botPet->SetFaction(14);
-                BotYell("去死吧!", player);
+                BotYell(LocalizedNpcText(player, BOT_TEXT_DIE), player);
                 me->Attack(player, true);
                 break;
             }
@@ -7286,22 +7260,22 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                     {
                         std::ostringstream ostr;
                         std::string name;
-                        ostr << "走开,我只为我的雇主服务 ";
+                        ostr << LocalizedNpcText(player, BOT_TEXT_HIREDENY_MY_MASTER_IS_);
                         if (sCharacterCache->GetCharacterNameByGuid(ObjectGuid(HighGuid::Player, _ownerGuid), name))
                             ostr << name;
                         else
-                            ostr << "未知的 (" << _ownerGuid << ')';
+                            ostr << LocalizedNpcText(player, BOT_TEXT_UNKNOWN) + " (" << _ownerGuid << ')';
                         BotWhisper(ostr.str().c_str(), player);
-                        ch.PSendSysMessage("%s w在我的雇主解雇我之前，我是不会加入你 %s", me->GetName().c_str(), (me->GetGender() == GENDER_MALE ? "him" : "her"));
+                        ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_OWNED).c_str(), me->GetName().c_str());
                         break;
                     }
                     case 2: //max npcbots exceed
-                        ch.PSendSysMessage("你最多只能雇佣 (%u)个仆从", BotMgr::GetMaxNpcBots());
+                        ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_MAXBOTS).c_str(), BotMgr::GetMaxNpcBots());
                         BotSay("...", player);
                         break;
                     case 3: //not enough money
                     {
-                        std::string str = "你没有足够的钱雇佣 (";
+                        std::string str = LocalizedNpcText(player, BOT_TEXT_HIREFAIL_COST) + " (";
                         str += BotMgr::GetNpcBotCostStr(player->GetLevel(), _botclass);
                         str += ")!";
                         ch.SendSysMessage(str.c_str());
@@ -7317,7 +7291,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                             if (itr->second->GetBotClass() == GetBotClass())
                                 ++count;
 
-                        ch.PSendSysMessage("你不能再雇佣这种职业的仆从了 %u of %u", count, BotMgr::GetMaxClassBots());
+                        ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_HIREFAIL_MAXCLASSBOTS).c_str(), count, BotMgr::GetMaxClassBots());
                         BotSay("...", player);
                         break;
                     }
@@ -7338,10 +7312,9 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             {
                 if (!(i <= BOT_SLOT_RANGED ? _resetEquipment(i) : _unequip(i)))
                 {
-                    std::ostringstream estr;
-                    estr << "无法重置穿戴装备的仆从 " << uint32(i) << " (" << _getNameForSlot(i) << ")! 不能解雇这个仆从!";
                     ChatHandler ch(player->GetSession());
-                    ch.SendSysMessage(estr.str().c_str());
+                    ch.PSendSysMessage(LocalizedNpcText(player, BOT_TEXT_CANT_DISMISS_EQUIPMENT).c_str(),
+                        uint32(i), LocalizedNpcText(player, BOT_TEXT_SLOT_MH + i).c_str());
                     abort = true;
                     break;
                 }
@@ -7419,14 +7392,14 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
         {
             subMenu = true;
             std::ostringstream diststr;
-            diststr << "跟随距离 (当前:: " << uint32(master->GetBotMgr()->GetBotFollowDist()) << ')';
+            diststr << LocalizedNpcText(player, BOT_TEXT_FOLLOW_DISTANCE) << " (" << LocalizedNpcText(player, BOT_TEXT_CURRENT) << ": " << uint32(master->GetBotMgr()->GetBotFollowDist()) << ')';
             player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, GOSSIP_ICON_CHAT, diststr.str(),
                 GOSSIP_SENDER_FORMATION_FOLLOW_DISTANCE_SET, GOSSIP_ACTION_INFO_DEF + 1, "", 0, true);
 
             if (HasRole(BOT_ROLE_RANGED))
-                AddGossipItemFor(player, GOSSIP_ICON_TALK, "远程攻击距离", GOSSIP_SENDER_FORMATION_ATTACK, GOSSIP_ACTION_INFO_DEF + 2);
+                AddGossipItemFor(player, GOSSIP_ICON_TALK, LocalizedNpcText(player, BOT_TEXT_ATTACK_DISTANCE) + "...", GOSSIP_SENDER_FORMATION_ATTACK, GOSSIP_ACTION_INFO_DEF + 2);
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 3);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 3);
             break;
         }
         case GOSSIP_SENDER_FORMATION_ATTACK_DISTANCE_SET:
@@ -7449,18 +7422,18 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             subMenu = true;
 
             uint8 mode = master->GetBotMgr()->GetBotAttackRangeMode();
-            AddGossipItemFor(player, mode == BOT_ATTACK_RANGE_SHORT ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "保持最小远程攻击距离", GOSSIP_SENDER_FORMATION_ATTACK_DISTANCE_SET, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, mode == BOT_ATTACK_RANGE_LONG ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, "保持最大远程攻击距离", GOSSIP_SENDER_FORMATION_ATTACK_DISTANCE_SET, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, mode == BOT_ATTACK_RANGE_SHORT ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_SHORT_RANGE_ATTACKS), GOSSIP_SENDER_FORMATION_ATTACK_DISTANCE_SET, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, mode == BOT_ATTACK_RANGE_LONG ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_LONG_RANGE_ATTACKS), GOSSIP_SENDER_FORMATION_ATTACK_DISTANCE_SET, GOSSIP_ACTION_INFO_DEF + 2);
 
             std::ostringstream diststr;
             if (mode == BOT_ATTACK_RANGE_EXACT)
-                diststr << "远程攻击距离 (当前:" << uint32(master->GetBotMgr()->GetBotExactAttackRange()) << '码)';
+                diststr << LocalizedNpcText(player, BOT_TEXT_EXACT) << " (" << LocalizedNpcText(player, BOT_TEXT_CURRENT) << ": " << uint32(master->GetBotMgr()->GetBotExactAttackRange()) << ')';
             else
-                diststr << "设置远程攻击距离 (0-50)";
+                diststr << LocalizedNpcText(player, BOT_TEXT_EXACT) << " (0-50)";
             player->PlayerTalkClass->GetGossipMenu().AddMenuItem(-1, mode == BOT_ATTACK_RANGE_EXACT ? GOSSIP_ICON_BATTLE : GOSSIP_ICON_CHAT,
                 diststr.str(), GOSSIP_SENDER_FORMATION_ATTACK_DISTANCE_SET, GOSSIP_ACTION_INFO_DEF + 3, "", 0, true);
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 4);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 4);
             break;
         }
         case GOSSIP_SENDER_TROUBLESHOOTING_AURA:
@@ -7568,8 +7541,8 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                             break;
                     }
 
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "刷新", sender, action);
-                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_UPDATE), sender, action);
+                    AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
                     break;
                 }
                 case 3: //Fix Powers
@@ -7587,14 +7560,15 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
         {
             subMenu = true;
             //AddGossipItemFor(player, GOSSIP_ICON_CHAT, "Fix not mounting/following", GOSSIP_SENDER_TROUBLESHOOTING_FIX, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "移除增益魔法", GOSSIP_SENDER_TROUBLESHOOTING_FIX, GOSSIP_ACTION_INFO_DEF + 2);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "修正仆从的属性", GOSSIP_SENDER_TROUBLESHOOTING_FIX, GOSSIP_ACTION_INFO_DEF + 3);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 4);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_REMOVE_BUFF) + "...", GOSSIP_SENDER_TROUBLESHOOTING_FIX, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_FIX_POWER), GOSSIP_SENDER_TROUBLESHOOTING_FIX, GOSSIP_ACTION_INFO_DEF + 3);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 4);
             break;
         }
         case GOSSIP_SENDER_DEBUG_ACTION:
         {
             //!!! player != owner !!!
+            //DEBUG ACTIONS ARE NOT LOCALIZED
             bool close = true;
             switch (action - GOSSIP_ACTION_INFO_DEF)
             {
@@ -7620,7 +7594,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 {
                     close = false;
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s的角色:", me->GetName().c_str());
+                    ch.PSendSysMessage("%s's Roles:", me->GetName().c_str());
                     for (uint16 i = BOT_MAX_ROLE; i != BOT_ROLE_NONE; i >>= 1)
                     {
                         if (_roleMask & i)
@@ -7628,22 +7602,22 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                             switch (i)
                             {
                                 case BOT_ROLE_TANK:
-                                    ch.SendSysMessage("坦克");
+                                    ch.SendSysMessage("BOT_ROLE_TANK");
                                     break;
                                 case BOT_ROLE_DPS:
-                                    ch.SendSysMessage("输出");
+                                    ch.SendSysMessage("BOT_ROLE_DPS");
                                     break;
                                 case BOT_ROLE_HEAL:
-                                    ch.SendSysMessage("治疗");
+                                    ch.SendSysMessage("BOT_ROLE_HEAL");
                                     break;
                                 //case BOT_ROLE_MELEE:
                                 //    ch.SendSysMessage("BOT_ROLE_MELEE");
                                 //    break;
                                 case BOT_ROLE_RANGED:
-                                    ch.SendSysMessage("远程");
+                                    ch.SendSysMessage("BOT_ROLE_RANGED");
                                     break;
                                 case BOT_ROLE_PARTY:
-                                    ch.SendSysMessage("队长");
+                                    ch.SendSysMessage("BOT_ROLE_PARTY");
                                     break;
                                 default:
                                     ch.PSendSysMessage("BOT_ROLE_%u",i);
@@ -7657,7 +7631,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                 {
                     close = false;
                     ChatHandler ch(player->GetSession());
-                    ch.PSendSysMessage("%s的法术:", me->GetName().c_str());
+                    ch.PSendSysMessage("%s's Spells:", me->GetName().c_str());
                     uint32 counter = 0;
                     SpellInfo const* spellInfo;
                     BotSpellMap const& myspells = GetSpellMap();
@@ -7709,27 +7683,27 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
 
             std::ostringstream ostr;
             std::string name;
-            ostr << "仆从: " << me->GetName()
+            ostr << "Bot: " << me->GetName()
                 << " (Id: " << me->GetEntry()
                 << ", guidlow: " << me->GetGUID().GetCounter()
-                << ", 专精: " << uint32(_spec) << '(' << BotTalentSpecStrings[_spec-1] << ')'
-                << ", 势力: " << me->GetFaction()
-                << "). 雇主: ";
+                << ", spec: " << uint32(_spec) << '(' << LocalizedNpcText(player, TextForSpec(_spec)) << ')'
+                << ", faction: " << me->GetFaction()
+                << "). owner: ";
             if (_ownerGuid && sCharacterCache->GetCharacterNameByGuid(ObjectGuid(HighGuid::Player, _ownerGuid), name))
                 ostr << name << " (" << _ownerGuid << ')';
             else
-                ostr << "暂无";
+                ostr << "none";
 
             AddGossipItemFor(player, GOSSIP_ICON_CHAT, ostr.str().c_str(), GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 0);
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<重置雇主>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 1);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<重置状态>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 2);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<列出状态>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 3);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<列出角色>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 4);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<列出法术>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 5);
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<重载配置文件>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 6);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<Reset Owner>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<Reset Stats>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 2);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<List Stats>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 3);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<List Roles>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 4);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<List Spells>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 5);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "<Reload Config>", GOSSIP_SENDER_DEBUG_ACTION, GOSSIP_ACTION_INFO_DEF + 6);
 
-            AddGossipItemFor(player, GOSSIP_ICON_CHAT, "返回", 1, GOSSIP_ACTION_INFO_DEF + 1);
+            AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
             break;
         }
         case GOSSIP_SENDER_SCAN:
@@ -7760,7 +7734,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
                     break;
             }
 
-            //AddGossipItemFor(player, GOSSIP_ICON_CHAT, "BACK", 1, GOSSIP_ACTION_INFO_DEF + 1);
+            //AddGossipItemFor(player, GOSSIP_ICON_CHAT, LocalizedNpcText(player, BOT_TEXT_BACK), 1, GOSSIP_ACTION_INFO_DEF + 1);
 
             break;
         }
@@ -8727,7 +8701,7 @@ bool bot_ai::_unequip(uint8 slot)
 
     int8 id = 1;
     EquipmentInfo const* einfo = sObjectMgr->GetEquipmentInfo(me->GetEntry(), id);
-    ASSERT(einfo && "试图脱下装备物品,但仆从没有装备信息!");
+    ASSERT(einfo && "Trying to unequip item for bot with no equip info!");
 
     Item* item = _equips[slot];
     if (!item)
@@ -8746,19 +8720,16 @@ bool bot_ai::_unequip(uint8 slot)
         InventoryResult msg = master->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, 1, &no_space);
         if (msg != EQUIP_ERR_OK)
         {
-            std::ostringstream istr, iistr;
-            istr << "不能卸下装备 ";
-            _AddItemLink(master, item, iistr, false);
-            istr << iistr.str() << " 因为一些愚蠢的原因！通过邮件发送";
+            std::ostringstream istr;
+            _AddItemLink(master, item, istr, false);
             ChatHandler ch(master->GetSession());
-            ch.SendSysMessage(istr.str().c_str());
+            ch.PSendSysMessage(LocalizedNpcText(master, BOT_TEXT_CANT_UNEQUIP_MAILING).c_str(), istr.str().c_str());
 
-            //MailHnadler::HandleSendMail()
             item->SetOwnerGUID(master->GetGUID());
 
             CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
             item->SaveToDB(trans);
-            MailDraft(iistr.str(), "").AddItem(item).SendMailTo(trans, MailReceiver(master), MailSender(me));
+            MailDraft(istr.str(), "").AddItem(item).SendMailTo(trans, MailReceiver(master), MailSender(me));
             CharacterDatabase.CommitTransaction(trans);
 
             //master->SendEquipError(msg, nullptr, nullptr, itemId);
@@ -8806,7 +8777,7 @@ bool bot_ai::_equip(uint8 slot, Item* newItem)
 
     int8 id = 1;
     EquipmentInfo const* einfo = sObjectMgr->GetEquipmentInfo(me->GetEntry(), id);
-    ASSERT(einfo && "试图装备某件物品,但是没有装备信息!");
+    ASSERT(einfo && "Trying to equip item for bot with no equip info!");
 
     ItemTemplate const* proto = newItem->GetTemplate();
 
@@ -8931,7 +8902,7 @@ bool bot_ai::_resetEquipment(uint8 slot)
 
     int8 id = 1;
     EquipmentInfo const* einfo = sObjectMgr->GetEquipmentInfo(me->GetEntry(), id);
-    ASSERT(einfo && "试图重置某件装备,但是没有装备信息!");
+    ASSERT(einfo && "Trying to reset equipment for bot with no equip info!");
 
     uint32 itemId = einfo->ItemEntry[slot];
     if (!itemId)
@@ -8957,7 +8928,7 @@ bool bot_ai::_resetEquipment(uint8 slot)
 
     //we have our standard weapon itemId which we should use to create new item
     Item* stItem = Item::CreateItem(itemId, 1, nullptr);
-    ASSERT(stItem && "为仆从创建标准物品失败!");
+    ASSERT(stItem && "Failed to create standard Item for bot!");
 
     if (!_equip(slot, stItem))
     {
@@ -9780,51 +9751,6 @@ inline float bot_ai::_getRatingMultiplier(CombatRating cr) const
     return classRating->Data / Rating->Data;
 }
 
-char const* bot_ai::_getNameForSlot(uint8 slot) const
-{
-    switch (slot)
-    {
-        case BOT_SLOT_MAINHAND:
-        return "主手武器";
-    case BOT_SLOT_OFFHAND:
-        return "副手武器";
-    case BOT_SLOT_RANGED:
-        return "远程武器";
-    case BOT_SLOT_HEAD:
-        return "头部";
-    case BOT_SLOT_SHOULDERS:
-        return "肩部";
-    case BOT_SLOT_CHEST:
-        return "胸部";
-    case BOT_SLOT_WAIST:
-        return "腰部";
-    case BOT_SLOT_LEGS:
-        return "腿部";
-    case BOT_SLOT_FEET:
-        return "脚";
-    case BOT_SLOT_WRIST:
-        return "手腕";
-    case BOT_SLOT_HANDS:
-        return "手";
-    case BOT_SLOT_BACK:
-        return "背部";
-    case BOT_SLOT_BODY:
-        return "衬衣";
-    case BOT_SLOT_FINGER1:
-        return "戒指1";
-    case BOT_SLOT_FINGER2:
-        return "戒指2";
-    case BOT_SLOT_TRINKET1:
-        return "饰品1";
-    case BOT_SLOT_TRINKET2:
-        return "饰品2";
-    case BOT_SLOT_NECK:
-        return "颈部";
-    default:
-        return "未知";
-    }
-}
-
 //!Copied from Player::CastItemUseSpell
 void bot_ai::_castBotItemUseSpell(Item const* item, SpellCastTargets const& targets/*, uint8 cast_count, uint32 glyphIndex*/)
 {
@@ -9902,30 +9828,32 @@ uint8 bot_ai::GetRoleIcon(uint16 role) const
 
 char const* bot_ai::GetRoleString(uint16 role) const
 {
+    ASSERT(!IAmFree());
+
     switch (role)
     {
         //case BOT_ROLE_NONE:
         //    return "???";
         case BOT_ROLE_TANK:
-        return "坦克";
-    case BOT_ROLE_DPS:
-        return "输出";
-    case BOT_ROLE_HEAL:
-        return "治疗";
-    case BOT_ROLE_RANGED:
-        return "远程";
-    case BOT_ROLE_GATHERING_MINING:
-        return "采矿";
-    case BOT_ROLE_GATHERING_HERBALISM:
-        return "草药";
-    case BOT_ROLE_GATHERING_SKINNING:
-        return "剥皮";
-    case BOT_ROLE_GATHERING_ENGINEERING:
-        return "工程学";
-    default:
-    {
-        std::ostringstream str;
-        str << "角色 " << uint32(role);
+            return LocalizedNpcText(master, BOT_TEXT_TANK).c_str();
+        case BOT_ROLE_DPS:
+            return LocalizedNpcText(master, BOT_TEXT_DPS).c_str();
+        case BOT_ROLE_HEAL:
+            return LocalizedNpcText(master, BOT_TEXT_HEAL).c_str();
+        case BOT_ROLE_RANGED:
+            return LocalizedNpcText(master, BOT_TEXT_RANGED).c_str();
+        case BOT_ROLE_GATHERING_MINING:
+            return LocalizedNpcText(master, BOT_TEXT_MINER).c_str();
+        case BOT_ROLE_GATHERING_HERBALISM:
+            return LocalizedNpcText(master, BOT_TEXT_HERBALIST).c_str();
+        case BOT_ROLE_GATHERING_SKINNING:
+            return LocalizedNpcText(master, BOT_TEXT_SKINNER).c_str();
+        case BOT_ROLE_GATHERING_ENGINEERING:
+            return LocalizedNpcText(master, BOT_TEXT_ENGINEER).c_str();
+        default:
+        {
+            std::ostringstream str;
+            str << LocalizedNpcText(master, BOT_TEXT_UNKNOWN) << " " << uint32(role);
             return str.str().c_str();
         }
     }
@@ -10325,17 +10253,55 @@ uint8 bot_ai::DefaultSpecForClass(uint8 m_class)
     return spec;
 }
 
+uint32 bot_ai::TextForSpec(uint8 spec)
+{
+    switch (spec)
+    {
+        case BOT_SPEC_WARRIOR_ARMS:         return BOT_TEXT_SPEC_ARMS;
+        case BOT_SPEC_WARRIOR_FURY:         return BOT_TEXT_SPEC_FURY;
+        case BOT_SPEC_WARRIOR_PROTECTION:   return BOT_TEXT_SPEC_PROTECTION;
+        case BOT_SPEC_PALADIN_HOLY:         return BOT_TEXT_SPEC_HOLY;
+        case BOT_SPEC_PALADIN_PROTECTION:   return BOT_TEXT_SPEC_PROTECTION;
+        case BOT_SPEC_PALADIN_RETRIBUTION:  return BOT_TEXT_SPEC_RETRIBUTION;
+        case BOT_SPEC_HUNTER_BEASTMASTERY:  return BOT_TEXT_SPEC_BEASTMASTERY;
+        case BOT_SPEC_HUNTER_MARKSMANSHIP:  return BOT_TEXT_SPEC_MARKSMANSHIP;
+        case BOT_SPEC_HUNTER_SURVIVAL:      return BOT_TEXT_SPEC_SURVIVAL;
+        case BOT_SPEC_ROGUE_ASSASINATION:   return BOT_TEXT_SPEC_ASSASINATION;
+        case BOT_SPEC_ROGUE_COMBAT:         return BOT_TEXT_SPEC_COMBAT;
+        case BOT_SPEC_ROGUE_SUBTLETY:       return BOT_TEXT_SPEC_SUBTLETY;
+        case BOT_SPEC_PRIEST_DISCIPLINE:    return BOT_TEXT_SPEC_DISCIPLINE;
+        case BOT_SPEC_PRIEST_HOLY:          return BOT_TEXT_SPEC_HOLY;
+        case BOT_SPEC_PRIEST_SHADOW:        return BOT_TEXT_SPEC_SHADOW;
+        case BOT_SPEC_DK_BLOOD:             return BOT_TEXT_SPEC_BLOOD;
+        case BOT_SPEC_DK_FROST:             return BOT_TEXT_SPEC_FROST;
+        case BOT_SPEC_DK_UNHOLY:            return BOT_TEXT_SPEC_UNHOLY;
+        case BOT_SPEC_SHAMAN_ELEMENTAL:     return BOT_TEXT_SPEC_ELEMENTAL;
+        case BOT_SPEC_SHAMAN_ENHANCEMENT:   return BOT_TEXT_SPEC_ENHANCEMENT;
+        case BOT_SPEC_SHAMAN_RESTORATION:   return BOT_TEXT_SPEC_RESTORATION;
+        case BOT_SPEC_MAGE_ARCANE:          return BOT_TEXT_SPEC_ARCANE;
+        case BOT_SPEC_MAGE_FIRE:            return BOT_TEXT_SPEC_FIRE;
+        case BOT_SPEC_MAGE_FROST:           return BOT_TEXT_SPEC_FROST;
+        case BOT_SPEC_WARLOCK_AFFLICTION:   return BOT_TEXT_SPEC_AFFLICTION;
+        case BOT_SPEC_WARLOCK_DEMONOLOGY:   return BOT_TEXT_SPEC_DEMONOLOGY;
+        case BOT_SPEC_WARLOCK_DESTRUCTION:  return BOT_TEXT_SPEC_DESTRUCTION;
+        case BOT_SPEC_DRUID_BALANCE:        return BOT_TEXT_SPEC_BALANCE;
+        case BOT_SPEC_DRUID_FERAL:          return BOT_TEXT_SPEC_FERAL;
+        case BOT_SPEC_DRUID_RESTORATION:    return BOT_TEXT_SPEC_RESTORATION;
+        case BOT_SPEC_DEFAULT: default:     return BOT_TEXT_SPEC_UNKNOWN;
+    }
+}
+
 void bot_ai::InitEquips()
 {
     int8 id = 1;
     EquipmentInfo const* einfo = sObjectMgr->GetEquipmentInfo(me->GetEntry(), id);
-    ASSERT(einfo && "试图创建一个没有装备信息的npcbot!");
+    ASSERT(einfo && "Trying to spawn bot with no equip info!");
 
     NpcBotData const* npcBotData = BotDataMgr::SelectNpcBotData(me->GetEntry());
     ASSERT(npcBotData && "bot_ai::InitEquips(): data not found!");
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_NPCBOT_EQUIP_BY_ITEM_INSTANCE);
-    //                    0                   1         2            3           4         5                6                    7              8             9        10       11            12             13
+    //        0            1                2      3         4        5      6             7                 8           9           10    11    12         13
     //"SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, guid, itemEntry, owner_guid "
     //  "FROM item_instance WHERE guid IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", CONNECTION_SYNCH
 
@@ -10358,7 +10324,7 @@ void bot_ai::InitEquips()
                 continue;
 
             item = Item::CreateItem(itemId, 1, nullptr);
-            ASSERT(item && "为仆从创建标准物品失败!");
+            ASSERT(item && "Failed to init standard Item for bot!");
             _equips[i] = item;
         }
     }
@@ -10464,7 +10430,7 @@ void bot_ai::InitEquips()
 
             //if bot has no equips but equip template then use those
             item = Item::CreateItem(einfo->ItemEntry[i], 1, nullptr);
-            ASSERT(item && "为仆从创建标准物品失败 point 2!");
+            ASSERT(item && "Failed to init standard Item for bot point 2!");
             _equips[i] = item;
 
             me->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + i, einfo->ItemEntry[i]);
@@ -10817,11 +10783,16 @@ void bot_ai::_LocalizeSpell(Player const* forPlayer, std::string &spellName, uin
 
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(entry);
     if (!spellInfo)
+    {
+        spellName = LocalizedNpcText(forPlayer, BOT_TEXT_UNKNOWN);
         return;
+    }
 
     std::string title = spellInfo->SpellName[loc];
     if (Utf8FitTo(title, wnamepart))
         spellName = title;
+    else
+        spellName = spellInfo->SpellName[sWorld->GetDefaultDbcLocale()];
 }
 
 void bot_ai::BotJump(Position const* pos)

@@ -730,22 +730,22 @@ public:
         {
             handler->SendSysMessage(".npcbot lookup #class");
             handler->SendSysMessage("按#class(职业)查找NpcBot，显示职业ID");
-            handler->PSendSysMessage("战士 = %u", uint32(BOT_CLASS_WARRIOR));
-            handler->PSendSysMessage("圣骑士 = %u", uint32(BOT_CLASS_PALADIN));
-            handler->PSendSysMessage("猎人 = %u", uint32(BOT_CLASS_HUNTER));
-            handler->PSendSysMessage("潜行者 = %u", uint32(BOT_CLASS_ROGUE));
-            handler->PSendSysMessage("牧师 = %u", uint32(BOT_CLASS_PRIEST));
-            handler->PSendSysMessage("死亡骑士 = %u", uint32(BOT_CLASS_DEATH_KNIGHT));
-            handler->PSendSysMessage("萨满 = %u", uint32(BOT_CLASS_SHAMAN));
-            handler->PSendSysMessage("法师 = %u", uint32(BOT_CLASS_MAGE));
-            handler->PSendSysMessage("术士 = %u", uint32(BOT_CLASS_WARLOCK));
-            handler->PSendSysMessage("德鲁伊 = %u", uint32(BOT_CLASS_DRUID));
-            handler->PSendSysMessage("剑圣 = %u", uint32(BOT_CLASS_BM));
-            handler->PSendSysMessage("黑曜石毁灭者 = %u", uint32(BOT_CLASS_SPHYNX));
-            handler->PSendSysMessage("大魔导师 = %u", uint32(BOT_CLASS_ARCHMAGE));
-            handler->PSendSysMessage("恐惧领主 = %u", uint32(BOT_CLASS_DREADLORD));
-            handler->PSendSysMessage("破法者 = %u", uint32(BOT_CLASS_SPELLBREAKER));
-            handler->PSendSysMessage("黑暗游侠 = %u", uint32(BOT_CLASS_DARK_RANGER));
+            handler->PSendSysMessage("BOT_CLASS_WARRIOR = %u", uint32(BOT_CLASS_WARRIOR));
+            handler->PSendSysMessage("BOT_CLASS_PALADIN = %u", uint32(BOT_CLASS_PALADIN));
+            handler->PSendSysMessage("BOT_CLASS_HUNTER = %u", uint32(BOT_CLASS_HUNTER));
+            handler->PSendSysMessage("BOT_CLASS_ROGUE = %u", uint32(BOT_CLASS_ROGUE));
+            handler->PSendSysMessage("BOT_CLASS_PRIEST = %u", uint32(BOT_CLASS_PRIEST));
+            handler->PSendSysMessage("BOT_CLASS_DEATH_KNIGHT = %u", uint32(BOT_CLASS_DEATH_KNIGHT));
+            handler->PSendSysMessage("BOT_CLASS_SHAMAN = %u", uint32(BOT_CLASS_SHAMAN));
+            handler->PSendSysMessage("BOT_CLASS_MAGE = %u", uint32(BOT_CLASS_MAGE));
+            handler->PSendSysMessage("BOT_CLASS_WARLOCK = %u", uint32(BOT_CLASS_WARLOCK));
+            handler->PSendSysMessage("BOT_CLASS_DRUID = %u", uint32(BOT_CLASS_DRUID));
+            handler->PSendSysMessage("BOT_CLASS_BLADEMASTER = %u", uint32(BOT_CLASS_BM));
+            handler->PSendSysMessage("BOT_CLASS_SPHYNX = %u", uint32(BOT_CLASS_SPHYNX));
+            handler->PSendSysMessage("BOT_CLASS_ARCHMAGE = %u", uint32(BOT_CLASS_ARCHMAGE));
+            handler->PSendSysMessage("BOT_CLASS_DREADLORD = %u", uint32(BOT_CLASS_DREADLORD));
+            handler->PSendSysMessage("BOT_CLASS_SPELLBREAKER = %u", uint32(BOT_CLASS_SPELLBREAKER));
+            handler->PSendSysMessage("BOT_CLASS_DARK_RANGER = %u", uint32(BOT_CLASS_DARK_RANGER));
             handler->SetSentErrorMessage(true);
             return false;
         }

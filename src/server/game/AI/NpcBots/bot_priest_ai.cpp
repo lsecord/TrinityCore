@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botmgr.h"
 #include "Group.h"
 #include "Map.h"
@@ -655,7 +655,7 @@ public:
                 return false;
 
             uint8 hp = GetHealthPCT(target);
-			bool pointed = IsPointedHealTarget(target);
+            bool pointed = IsPointedHealTarget(target);
             if (hp > 90 && !(pointed && me->GetMap()->IsRaid()) &&
                 (!target->IsInCombat() || target->getAttackers().empty() || !IsTank(target) || !me->GetMap()->IsRaid()))
                 return false;
@@ -680,12 +680,12 @@ public:
                 if (doCast(target, GetSpell(GUARDIAN_SPIRIT_1)))
                 {
                     if (target->GetTypeId() == TYPEID_PLAYER)
-                        BotWhisper("守护buff给你!", target->ToPlayer());
-                    if (target != master)
+                        ReportSpellCast(GUARDIAN_SPIRIT_1, LocalizedNpcText(target->ToPlayer(), BOT_TEXT__ON_YOU), target->ToPlayer());
+
+                    if (!IAmFree() && target != master)
                     {
-                        std::ostringstream msg;
-                        msg << "守护buff给 " << (target == me ? "myself" : target->GetName()) << '!';
-                        BotWhisper(msg.str().c_str());
+                        std::string msg = target == me ? LocalizedNpcText(master, BOT_TEXT__ON_MYSELF) : (LocalizedNpcText(master, BOT_TEXT__ON_) + target->GetName() + '!');
+                        ReportSpellCast(GUARDIAN_SPIRIT_1, msg, master);
                     }
                     //return true;
                 }
@@ -701,12 +701,12 @@ public:
                 if (doCast(target, GetSpell(PAIN_SUPPRESSION_1)))
                 {
                     if (target->GetTypeId() == TYPEID_PLAYER)
-                        BotWhisper("痛苦压制 给你!", target->ToPlayer());
-                    if (target != master)
+                        ReportSpellCast(PAIN_SUPPRESSION_1, LocalizedNpcText(target->ToPlayer(), BOT_TEXT__ON_YOU), target->ToPlayer());
+
+                    if (!IAmFree() && target != master)
                     {
-                        std::ostringstream msg;
-                        msg << "痛苦压制 给 " << (target == me ? "myself" : target->GetName()) << '!';
-                        BotWhisper(msg.str().c_str());
+                        std::string msg = target == me ? LocalizedNpcText(master, BOT_TEXT__ON_MYSELF) : (LocalizedNpcText(master, BOT_TEXT__ON_) + target->GetName() + '!');
+                        ReportSpellCast(PAIN_SUPPRESSION_1, msg, master);
                     }
                     return true;
                 }

@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botmgr.h"
 #include "Group.h"
 #include "Item.h"
@@ -695,13 +695,10 @@ public:
                 if (doCast(target, GetSpell(HAND_OF_PROTECTION_1)))
                 {
                     if (target->GetTypeId() == TYPEID_PLAYER)
-                        BotWhisper("保护之手施放给你!", target->ToPlayer());
-                    if (target != master)
-                    {
-                        std::ostringstream msg;
-                        msg << "保护之手施放给 " << target->GetName() << '!';
-                        BotWhisper(msg.str().c_str());
-                    }
+                        ReportSpellCast(HAND_OF_PROTECTION_1, LocalizedNpcText(target->ToPlayer(), BOT_TEXT__ON_YOU), target->ToPlayer());
+
+                    if (!IAmFree() && target != master)
+                        ReportSpellCast(HAND_OF_PROTECTION_1, LocalizedNpcText(master, BOT_TEXT__ON_) + target->GetName() + '!', master);
                 }
                 return true;
             }
@@ -896,7 +893,7 @@ public:
             if (!target || !target->IsAlive() || target->GetShapeshiftForm() == FORM_SPIRITOFREDEMPTION || me->GetDistance(target) > 40)
                 return false;
             uint8 hp = GetHealthPCT(target);
-			bool pointed = IsPointedHealTarget(target);
+            bool pointed = IsPointedHealTarget(target);
             if (hp > 90 && !(pointed && me->GetMap()->IsRaid()) &&
                 (!target->IsInCombat() || target->getAttackers().empty() || !IsTank(target) || !me->GetMap()->IsRaid()))
                 return false;
@@ -921,12 +918,12 @@ public:
                 if (doCast(target, GetSpell(LAY_ON_HANDS_1)))
                 {
                     if (target->GetTypeId() == TYPEID_PLAYER)
-                        BotWhisper("给你圣疗术!", target->ToPlayer());
-                    if (target != master)
+                        ReportSpellCast(LAY_ON_HANDS_1, LocalizedNpcText(target->ToPlayer(), BOT_TEXT__ON_YOU), target->ToPlayer());
+
+                    if (!IAmFree() && target != master)
                     {
-                        std::ostringstream msg;
-                        msg << "圣疗术施放给 " << (target == me ? "我自己" : target->GetName()) << '!';
-                        BotWhisper(msg.str().c_str());
+                        std::string msg = target == me ? LocalizedNpcText(master, BOT_TEXT__ON_MYSELF) : (LocalizedNpcText(master, BOT_TEXT__ON_) + target->GetName() + '!');
+                        ReportSpellCast(LAY_ON_HANDS_1, msg, master);
                     }
                     return true;
                 }
@@ -2555,39 +2552,21 @@ public:
         }
 
         bool HasAbilitiesSpecifics() const override { return true; }
-        void FillAbilitiesSpecifics(std::list<std::string> &specList) override
+        void FillAbilitiesSpecifics(Player const* player, std::list<std::string> &specList) override
         {
-            std::ostringstream msg1;
-            msg1 << "Aura: ";
+            uint32 textId;
             switch (_aura)
             {
-                case DEVOTIONAURA:
-                    msg1 << "Devotion Aura";
-                    break;
-                case CONCENTRATIONAURA:
-                    msg1 << "Concentration Aura";
-                    break;
-                case FIRERESAURA:
-                    msg1 << "Fire Resistance Aura";
-                    break;
-                case FROSTRESAURA:
-                    msg1 << "Frost Resistance Aura";
-                    break;
-                case SHADOWRESAURA:
-                    msg1 << "Shadow Resistance Aura";
-                    break;
-                case RETRIBUTIONAURA:
-                    msg1 << "Retribution Aura";
-                    break;
-                case CRUSADERAURA:
-                    msg1 << "Crusader Aura";
-                    break;
-                case NOAURA:
-                default:
-                    msg1 << "No Aura";
-                    break;
+                case DEVOTIONAURA:      textId = BOT_TEXT_DEVOTION;         break;
+                case CONCENTRATIONAURA: textId = BOT_TEXT_CONCENTRATION;    break;
+                case FIRERESAURA:       textId = BOT_TEXT_FIRERESISTANCE;   break;
+                case FROSTRESAURA:      textId = BOT_TEXT_FROSTRESISTANCE;  break;
+                case SHADOWRESAURA:     textId = BOT_TEXT_SHADOWRESISTANCE; break;
+                case RETRIBUTIONAURA:   textId = BOT_TEXT_RETRIBUTION;      break;
+                case CRUSADERAURA:      textId = BOT_TEXT_CRUSADER;         break;
+                case NOAURA: default:   textId = BOT_TEXT_NOAURA;           break;
             }
-            specList.push_back(msg1.str());
+            specList.push_back(LocalizedNpcText(player, BOT_TEXT_AURA) + ": " + LocalizedNpcText(player, textId));
         }
 
         std::vector<uint32> const* GetDamagingSpellsList() const

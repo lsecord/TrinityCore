@@ -1,4 +1,4 @@
-﻿#include "bot_ai.h"
+#include "bot_ai.h"
 #include "botmgr.h"
 #include "GridNotifiersImpl.h"
 #include "Group.h"
@@ -2242,41 +2242,22 @@ public:
         }
 
         bool HasAbilitiesSpecifics() const override { return true; }
-        void FillAbilitiesSpecifics(std::list<std::string> &specList) override
+        void FillAbilitiesSpecifics(Player const* player, std::list<std::string> &specList) override
         {
-            std::ostringstream msg1;
-            msg1 << "当前守护: ";
+            uint32 textId;
             switch (Aspect)
             {
-                case ASPECT_MONKEY:
-                    msg1 << "灵猴守护";
-                    break;
-                case ASPECT_HAWK:
-                    msg1 << "雄鹰守护";
-                    break;
-                case ASPECT_CHEETAH:
-                    msg1 << "猎豹守护";
-                    break;
-                case ASPECT_VIPER:
-                    msg1 << "蝰蛇守护";
-                    break;
-                case ASPECT_BEAST:
-                    msg1 << "野兽守护";
-                    break;
-                case ASPECT_PACK:
-                    msg1 << "豹群守护";
-                    break;
-                case ASPECT_WILD:
-                    msg1 << "野性守护";
-                    break;
-                case ASPECT_DRAGONHAWK:
-                    msg1 << "龙鹰守护";
-                    break;
-               default:
-                    msg1 << "没有守护";
-                    break;
+                case ASPECT_MONKEY:     textId = BOT_TEXT_MONKEY;       break;
+                case ASPECT_HAWK:       textId = BOT_TEXT_HAWK;         break;
+                case ASPECT_CHEETAH:    textId = BOT_TEXT_CHEETAH;      break;
+                case ASPECT_VIPER:      textId = BOT_TEXT_VIPER;        break;
+                case ASPECT_BEAST:      textId = BOT_TEXT_BEAST;        break;
+                case ASPECT_PACK:       textId = BOT_TEXT_PACK;         break;
+                case ASPECT_WILD:       textId = BOT_TEXT_WILD;         break;
+                case ASPECT_DRAGONHAWK: textId = BOT_TEXT_DRAGONHAWK;   break;
+                default:                textId = BOT_TEXT_NOASPECT;     break;
             }
-            specList.push_back(msg1.str());
+            specList.push_back(LocalizedNpcText(player, BOT_TEXT_ASPECT) + ": " + LocalizedNpcText(player, textId));
         }
 
         std::vector<uint32> const* GetDamagingSpellsList() const
