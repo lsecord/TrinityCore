@@ -92,14 +92,14 @@ jobs:
         echo $GITHUB_WORKSPACE
     #- name: Check executables
       #run: |
-      #  cd D:\a\TrinityCore-NPCBOT-Eluna-zhCN\TrinityCore-NPCBOT-Eluna-zhCN\bin\bin\Release\
+      #  cd D:\a\TrinityCore\TrinityCore\bin\bin\Release\
       #  authserver.exe --version
        # worldserver.exe --version
     - name: 7zip pack
       uses: DuckSoft/create-7z-action@v1.0
       with:
       # file/folder path to compress
-        pathSource: D:\a\TrinityCore-NPCBOT-Eluna-zhCN\TrinityCore-NPCBOT-Eluna-zhCN\bin\bin\
+        pathSource: D:\a\TrinityCore\TrinityCore\bin\bin\
     # 7z archive path to write
         pathTarget: \TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win64.7z
     - name: Upload Release Asset
