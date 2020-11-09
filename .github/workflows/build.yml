@@ -72,9 +72,9 @@ jobs:
       run: |
          vcpkg update
          vcpkg integrate install
-         vcpkg install openssl:x64-windows
-         Get-ChildItem C:\vcpkg\installed\x64-windows\bin
-         Get-ChildItem C:\vcpkg\installed\x64-windows\lib
+         vcpkg install openssl:x86-windows
+         Get-ChildItem C:\vcpkg\installed\x86-windows\bin
+         Get-ChildItem C:\vcpkg\installed\x86-windows\lib
     - name: Setup
       run: |
         chcp 65001
@@ -85,10 +85,10 @@ jobs:
         $env:BOOST_ROOT=$env:BOOST_ROOT_1_72_0
         mkdir bin
         cd bin
-        cmake ../ -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DOPENSSL_ROOT_DIR:PATH="C:\vcpkg\installed\x64-windows" -DLIB_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="C:\vcpkg\installed\x64-windows\include" -DSSL_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" 
+        cmake ../ -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DOPENSSL_ROOT_DIR:PATH="C:\vcpkg\installed\x86-windows" -DLIB_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="C:\vcpkg\installed\x86-windows\include" -DSSL_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" 
         cmake --build . --config Release
-        Copy-Item C:\mysql-5.7.21-winx64\lib\libmysql.dll -Destination .\bin\Release\
-        Copy-Item C:\mysql-5.7.21-winx64\bin\mysql.exe -Destination .\bin\Release\
+        Copy-Item C:\mysql-5.7.21-winx86\lib\libmysql.dll -Destination .\bin\Release\
+        Copy-Item C:\mysql-5.7.21-winx86\bin\mysql.exe -Destination .\bin\Release\
         echo $GITHUB_WORKSPACE
     #- name: Check executables
       #run: |
