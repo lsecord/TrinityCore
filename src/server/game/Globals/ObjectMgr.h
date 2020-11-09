@@ -37,6 +37,7 @@
 #include <iterator>
 #include <map>
 #include <unordered_map>
+#include "Item.h"
 
 class Item;
 class Unit;
@@ -171,6 +172,21 @@ struct GameTele
 };
 
 typedef std::unordered_map<uint32, GameTele> GameTeleContainer;
+
+#define MAX_CREATURE_OUTFIT_DISPLAYS 11
+struct CreatureOutfit
+{
+    uint8 race;
+    uint8 gender;
+    uint8 face;
+    uint8 skin;
+    uint8 hair;
+    uint8 facialhair;
+    uint8 haircolor;
+    uint32 outfit[MAX_CREATURE_OUTFIT_DISPLAYS];
+};
+
+typedef std::unordered_map<uint32, CreatureOutfit > CreatureOutfitContainer;
 
 enum ScriptsType
 {
@@ -536,6 +552,7 @@ struct QuestGreetingLocale
 
 typedef std::map<ObjectGuid, ObjectGuid> LinkedRespawnContainer;
 typedef std::unordered_map<uint32, CreatureTemplate> CreatureTemplateContainer;
+//typedef std::unordered_map<uint32, std::vector<uint32>> RandomItemStatsContainer;
 typedef std::unordered_map<uint32, CreatureAddon> CreatureTemplateAddonContainer;
 typedef std::unordered_map<ObjectGuid::LowType, CreatureData> CreatureDataContainer;
 typedef std::unordered_map<ObjectGuid::LowType, CreatureAddon> CreatureAddonContainer;
@@ -984,6 +1001,7 @@ class TC_GAME_API ObjectMgr
         CreatureTemplate const* GetCreatureTemplate(uint32 entry) const;
         CreatureTemplateContainer const& GetCreatureTemplates() const { return _creatureTemplateStore; }
         CreatureModelInfo const* GetCreatureModelInfo(uint32 modelId) const;
+        RandomItemStatsContainer const* GetRandomItemStats() const { return &_randomItemStatsStore; }
         CreatureModelInfo const* GetCreatureModelRandomGender(uint32* displayID) const;
         static uint32 ChooseDisplayId(CreatureTemplate const* cinfo, CreatureData const* data = nullptr);
         static void ChooseCreatureFlags(CreatureTemplate const* cinfo, uint32& npcflag, uint32& unit_flags, uint32& dynamicflags, CreatureData const* data = nullptr);
@@ -1145,6 +1163,9 @@ class TC_GAME_API ObjectMgr
 
         bool LoadTrinityStrings();
 
+        void LoadRandomItemStats();
+        void LoadRandomItemStats(Field* fields, uint32 count);
+
         void LoadEventScripts();
         void LoadSpellScripts();
         void LoadWaypointScripts();
@@ -1227,6 +1248,8 @@ class TC_GAME_API ObjectMgr
         void LoadQuestPOI();
 
         void LoadNPCSpellClickSpells();
+
+        void LoadCreatureOutfits();
 
         void LoadGameTele();
 
@@ -1489,6 +1512,8 @@ class TC_GAME_API ObjectMgr
         bool AddGameTele(GameTele& data);
         bool DeleteGameTele(std::string_view name);
 
+        CreatureOutfitContainer const& GetCreatureOutfitMap() const { return _creatureOutfitStore; }
+
         Trainer::Trainer const* GetTrainer(uint32 creatureId) const;
 
         VendorItemData const* GetNpcVendorItemList(uint32 entry) const
@@ -1650,6 +1675,8 @@ class TC_GAME_API ObjectMgr
         PageTextContainer _pageTextStore;
         InstanceTemplateContainer _instanceTemplateStore;
 
+        CreatureOutfitContainer _creatureOutfitStore;
+
     private:
         void LoadScripts(ScriptsType type);
         void LoadQuestRelationsHelper(QuestRelations& map, std::string const& table);
@@ -1684,6 +1711,7 @@ class TC_GAME_API ObjectMgr
 
         typedef std::unordered_map<uint32, ItemSetNameEntry> ItemSetNameContainer;
         ItemSetNameContainer _itemSetNameStore;
+        RandomItemStatsContainer _randomItemStatsStore;
 
         MapObjectGuids _mapObjectGuidsStore;
         CreatureDataContainer _creatureDataStore;

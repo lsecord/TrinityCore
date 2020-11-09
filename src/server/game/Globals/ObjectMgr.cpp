@@ -350,6 +350,39 @@ void ObjectMgr::LoadPointOfInterestLocales()
     TC_LOG_INFO("server.loading", ">> Loaded %u points_of_interest locale strings in %u ms", uint32(_pointOfInterestLocaleStore.size()), GetMSTimeDiffToNow(oldMSTime));
 }
 
+void ObjectMgr::LoadRandomItemStats()
+{
+    uint32 oldMSTime = getMSTime();
+    //                                                0      1           2
+    QueryResult result = WorldDatabase.Query("SELECT id, stat_count, stat_amount FROM random_item_stats;");
+    if (!result)
+    {
+        TC_LOG_INFO("server.loading", ">> Loaded 0 random item stats definitions. DB table `random_item_stats` is empty.");
+        return;
+    }
+    _randomItemStatsStore.rehash(result->GetRowCount());
+    uint32 count = 0;
+    do
+    {
+        Field* fields = result->Fetch();
+        LoadRandomItemStats(fields, count);
+        ++count;
+    } while (result->NextRow());
+
+    TC_LOG_INFO("server.loading", ">> Loaded %u random item stats definitions in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+}
+
+void ObjectMgr::LoadRandomItemStats(Field* fields, uint32 count)
+{
+    uint32 entry = fields[0].GetUInt32();
+
+    RandomItemStats& randomItemStats = _randomItemStatsStore[count];
+
+    randomItemStats.ID = entry;
+    randomItemStats.Count = fields[1].GetUInt32();
+    randomItemStats.Amount = fields[2].GetUInt32();
+}
+
 void ObjectMgr::LoadCreatureTemplates()
 {
     uint32 oldMSTime = getMSTime();
@@ -1185,6 +1218,11 @@ void ObjectMgr::CheckCreatureTemplate(CreatureTemplate const* cInfo)
         TC_LOG_ERROR("sql.sql", "Table `creature_template` lists creature (Entry: %u) with expansion %u. Ignored and set to 0.", cInfo->Entry, cInfo->expansion);
         const_cast<CreatureTemplate*>(cInfo)->expansion = 0;
     }
+
+    //npcbot: skip flags check and damage multiplier
+    if (cInfo->flags_extra & (CREATURE_FLAG_EXTRA_NPCBOT | CREATURE_FLAG_EXTRA_NPCBOT_PET))
+        return;
+    //end npcbot
 
     if (uint32 badFlags = (cInfo->flags_extra & ~CREATURE_FLAG_EXTRA_DB_ALLOWED))
     {
@@ -6169,7 +6207,7 @@ void ObjectMgr::LoadGossipText()
             }
 
             // check broadcast_text correctness
-            if (gOption.BroadcastTextID)
+            /* if (gOption.BroadcastTextID)
             {
                 if (BroadcastText const* bcText = sObjectMgr->GetBroadcastText(gOption.BroadcastTextID))
                 {
@@ -6185,7 +6223,7 @@ void ObjectMgr::LoadGossipText()
                 }
 
 
-            }
+            } */
         }
 
     }
@@ -8873,6 +8911,82 @@ SkillRangeType GetSkillRangeType(SkillRaceClassInfoEntry const* rcEntry)
     }
 
     return SKILL_RANGE_LEVEL;
+}
+
+void ObjectMgr::LoadCreatureOutfits()
+{
+    uint32 oldMSTime = getMSTime();
+
+    _creatureOutfitStore.clear();                           // for reload case (test only)
+
+    //                                                 0     1      2      3     4     5       6           7
+    QueryResult result = WorldDatabase.Query("SELECT entry, race, gender, skin, face, hair, haircolor, facialhair, "
+        //8       9        10    11     12     13    14     15     16     17     18
+        "head, shoulders, body, chest, waist, legs, feet, wrists, hands, back, tabard FROM creature_template_outfits");
+
+    if (!result)
+    {
+        TC_LOG_ERROR("server.loading", ">> Loaded 0 creature outfits. DB table `creature_template_outfits` is empty!");
+        return;
+    }
+
+    uint32 count = 0;
+
+    do
+    {
+        Field* fields = result->Fetch();
+
+        uint32 i = 0;
+        uint32 entry     = fields[i++].GetUInt32();
+
+        if (!GetCreatureTemplate(entry))
+        {
+            TC_LOG_ERROR("server.loading", ">> Creature entry %u in `creature_template_outfits`, but not in `creature_template`!", entry);
+            continue;
+        }
+
+        CreatureOutfit co; // const, shouldnt be changed after saving
+        co.race          = fields[i++].GetUInt8();
+        ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(co.race);
+        if (!rEntry)
+        {
+            TC_LOG_ERROR("server.loading", ">> Creature entry %u in `creature_template_outfits` has incorrect race (%u).", entry, uint32(co.race));
+            continue;
+        }
+        co.gender        = fields[i++].GetUInt8();
+        // Set correct displayId
+        switch (co.gender)
+        {
+            case GENDER_FEMALE:
+                _creatureTemplateStore[entry].Modelid1 = rEntry->FemaleDisplayID;
+                break;
+            case GENDER_MALE:
+                _creatureTemplateStore[entry].Modelid1 = rEntry->MaleDisplayID;
+                break;
+            default:
+                TC_LOG_ERROR("server.loading", ">> Creature entry %u in `creature_template_outfits` has invalid gender %u", entry, uint32(co.gender));
+                continue;
+        }
+        _creatureTemplateStore[entry].Modelid2 = 0;
+        _creatureTemplateStore[entry].Modelid3 = 0;
+        _creatureTemplateStore[entry].Modelid4 = 0;
+        _creatureTemplateStore[entry].unit_flags2 |= UNIT_FLAG2_MIRROR_IMAGE; // Needed so client requests mirror packet
+
+        co.skin          = fields[i++].GetUInt8();
+        co.face          = fields[i++].GetUInt8();
+        co.hair          = fields[i++].GetUInt8();
+        co.haircolor     = fields[i++].GetUInt8();
+        co.facialhair    = fields[i++].GetUInt8();
+        for (uint32 j = 0; j != MAX_CREATURE_OUTFIT_DISPLAYS; ++j)
+            co.outfit[j] = fields[i+j].GetUInt32();
+
+        _creatureOutfitStore[entry] = co;
+
+        ++count;
+    }
+    while (result->NextRow());
+
+    TC_LOG_INFO("server.loading", ">> Loaded %u creature outfits in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
 void ObjectMgr::LoadGameTele()

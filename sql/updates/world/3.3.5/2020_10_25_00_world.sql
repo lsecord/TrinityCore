@@ -17,8 +17,8 @@ INSERT INTO `smart_scripts` (`entryorguid`,`source_type`,`id`,`link`,`event_type
 
 DELETE FROM `creature_text` WHERE `CreatureID` = 19166;
 INSERT INTO `creature_text` (`CreatureID`,`GroupID`,`ID`,`Text`,`Type`,`Language`,`Probability`,`Emote`,`Duration`,`Sound`,`BroadcastTextId`,`TextRange`,`comment`) VALUES
-(19166,0,0,"Any intruders must be eliminated!",14,0,100,0,0,0,16785,0,"Tempest-Forge Patroller"),
-(19166,0,1,"Protect the Mechanar at all costs!",14,0,100,0,0,0,17913,0,"Tempest-Forge Patroller");
+(19166,0,0,"必须消除任何入侵者！",14,0,100,0,0,0,16785,0,"Tempest-Forge Patroller"),
+(19166,0,1,"不惜一切代价保护机械！",14,0,100,0,0,0,17913,0,"Tempest-Forge Patroller");
 
 -- Update gameobjects
 UPDATE `gameobject_template_addon` SET `faction` = 1375, `flags` = 32 WHERE `entry` = 184449;

@@ -129,7 +129,7 @@ public:
                 if (PoisonBolt_Timer <= diff)
                 {
                     DoCastVictim(SPELL_POISONBOLT);
-                    PoisonBolt_Timer = 3000;
+                    PoisonBolt_Timer = 13000;
                 } else PoisonBolt_Timer -= diff;
             }
 

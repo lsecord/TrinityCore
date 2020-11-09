@@ -86,6 +86,9 @@
 #include "WardenCheckMgr.h"
 #include "WaypointManager.h"
 #include "WeatherMgr.h"
+#ifdef ELUNA
+#include "LuaEngine.h"
+#endif			
 #include "WhoListStorage.h"
 #include "WorldSession.h"
 
@@ -1514,6 +1517,12 @@ void World::LoadConfigSettings(bool reload)
     // prevent character rename on character customization
     m_bool_configs[CONFIG_PREVENT_RENAME_CUSTOMIZATION] = sConfigMgr->GetBoolDefault("PreventRenameCharacterOnCustomization", false);
 
+    // Mod Random Items Stats
+    m_bool_configs[CONFIG_MOD_RANDOM_ITEMSTATS_ENABLE] = sConfigMgr->GetBoolDefault("Random.ItemStats.Enable", true);
+    m_int_configs[CONFIG_MOD_RANDOM_ITEMSTATS_RATE] = sConfigMgr->GetIntDefault("Random.ItemStats.Rate", 10);
+    m_int_configs[CONFIG_MOD_RANDOM_ITEMSTATS_ITEMLEVEL] = sConfigMgr->GetIntDefault("Random.ItemStats.ItemLevel", 250);
+    m_int_configs[CONFIG_MOD_RANDOM_ITEMSTATS_ITEMLEVELUP] = sConfigMgr->GetIntDefault("Random.ItemStats.ItemLevelUp", 200);
+
     // Allow 5-man parties to use raid warnings
     m_bool_configs[CONFIG_CHAT_PARTY_RAID_WARNINGS] = sConfigMgr->GetBoolDefault("PartyRaidWarnings", false);
 
@@ -1571,6 +1580,12 @@ void World::SetInitialWorldSettings()
         TC_LOG_FATAL("server.loading", "Unable to load critical files - server shutting down !!!");
         exit(1);
     }
+
+#ifdef ELUNA
+    ///- Initialize Lua Engine
+    TC_LOG_INFO("server.loading", "Initialize Eluna Lua Engine...");
+    Eluna::Initialize();
+#endif
 
     ///- Initialize pool manager
     sPoolMgr->Initialize();
@@ -2066,6 +2081,12 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Loading Calendar data...");
     sCalendarMgr->LoadFromDB();
 
+    if (sWorld->getBoolConfig(CONFIG_MOD_RANDOM_ITEMSTATS_ENABLE))
+    {
+        TC_LOG_INFO("server.loading", "Loading Random Item Stats...");
+        sObjectMgr->LoadRandomItemStats();
+    }
+
     TC_LOG_INFO("server.loading", "Loading Petitions...");
     sPetitionMgr->LoadPetitions();
 
@@ -2187,6 +2208,12 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Calculate guild limitation(s) reset time...");
     InitGuildResetTime();
 
+#ifdef ELUNA
+    ///- Run eluna scripts.
+    // in multithread foreach: run scripts
+    sEluna->RunScripts();
+    sEluna->OnConfigLoad(false); // Must be done after Eluna is initialized and scripts have run.
+#endif
     // Preload all cells, if required for the base maps
     if (sWorld->getBoolConfig(CONFIG_BASEMAP_LOAD_GRIDS))
     {

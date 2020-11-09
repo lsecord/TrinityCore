@@ -8,15 +8,17 @@ environment:
   OPENSSL_ROOT_DIR: C:\OpenSSL-Win64
 build_script:
 - cmd: >-
+    chcp 65001
+    
     git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
     git tag -a -m "AppVeyor build" init
 
     md build && cd build
 
-    cmake -G"Visual Studio 16 2019" -A x64 -DSCRIPTS=dynamic -DTOOLS=True -DCMAKE_CXX_FLAGS=" /DWIN32 /D_WINDOWS /W3 /GR /EHsc /WX" -DCMAKE_C_FLAGS="/DWIN32 /D_WINDOWS /W3 /WX" ..
+    cmake -G"Visual Studio 16 2019" -A x64 -DTOOLS=True -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" ..
 
-    "%programfiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\MsBuild.exe" /nologo /m:2 /p:Configuration=RelWithDebInfo /p:Platform="X64" /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "TrinityCore.sln"
+    "%programfiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\MsBuild.exe" /p:source-charset=utf-8 /nologo /m:2 /p:Configuration=RelWithDebInfo /p:Platform="X64" /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "TrinityCore.sln"
 
     cd bin\RelWithDebInfo\
 
@@ -28,16 +30,17 @@ build_script:
 
     cd ..
 
-    7z a TrinityCoreWin64VS2019.zip .\RelWithDebInfo\*
+    7z a -t7z TrinityCoreWin64SymbolsVS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
     del /F /Q /S "RelWithDebInfo\*.pdb" > NUL
 
-    7z a TrinityCoreWin64VS2019NoSymbols.zip .\RelWithDebInfo\*
+    7z a -t7z TrinityCoreWin64VS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
 test: off
 artifacts:
-- path: build\bin\TrinityCoreWin64VS2019.zip
+- path: build\bin\TrinityCoreWin64SymbolsVS2019.7z
+  name: TrinityCoreWin64SymbolsVS2019
+
+- path: build\bin\TrinityCoreWin64VS2019.7z
   name: TrinityCoreWin64VS2019
 
-- path: build\bin\TrinityCoreWin64VS2019NoSymbols.zip
-  name: TrinityCoreWin64VS2019NoSymbols

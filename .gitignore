@@ -23,3 +23,6 @@ nbproject/*
 cmake-build-*/
 .vs
 *.user
+src/server/game/LuaEngine/
+*.zip
+*.7z
