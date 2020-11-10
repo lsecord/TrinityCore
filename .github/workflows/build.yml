@@ -61,7 +61,7 @@ jobs:
      #     path: ./upload_url.txt
   
   build-windows:
-    needs: [create_release]
+   # needs: [create_release]
     runs-on: windows-latest
     steps:
     - name: Checkout
