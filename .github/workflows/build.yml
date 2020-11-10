@@ -70,13 +70,14 @@ jobs:
       uses: microsoft/setup-msbuild@v1
     - name: add lib
       run: |
+         Get-ChildItem C:\
          vcpkg update
          vcpkg integrate install
          vcpkg install openssl:x86-windows
          vcpkg install mysql:x86-windows
          Get-ChildItem C:\vcpkg\installed\x86-windows\bin
          Get-ChildItem C:\vcpkg\installed\x86-windows\lib
-     #    Get-ChildItem C:\mysql-5.7.21-winx86
+         Get-ChildItem C:\mysql-5.7.21-winx86
     - name: Setup
       run: |
         chcp 65001
