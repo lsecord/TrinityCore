@@ -14,7 +14,7 @@ environment:
   OPENSSL_ROOT_DIR: C:\OpenSSL-Win32
 build_script:
 
-- ps: | 
+- pwsh: | 
       echo "downloading mysql-5.7.9-win32"
     
     Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
