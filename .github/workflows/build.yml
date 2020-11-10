@@ -3,10 +3,11 @@ on:
  # release:
   #  types:
     #  - created
+ pull_request:
  push:
-   tags: 
+    tags: 
       - 'v*'
-  # pull_request:
+    
 jobs:
   create_release:
     runs-on: ubuntu-latest
@@ -130,7 +131,7 @@ jobs:
       run: |
         mkdir bin
         cd bin
-        cmake ../ -DWITH_WARNINGS=0 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DELUNA:BOOL="1" -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fpermissive -m32" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=0
+        cmake ../ -DWITH_WARNINGS=0 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DELUNA:BOOL="1" -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fpermissive -m32" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=0  -DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_C_COMPILER=$(which gcc) .
         cd ..
     - name: Build
       run: |
