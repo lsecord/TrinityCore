@@ -16,6 +16,7 @@ environment:
   MYSQL_HOME: C:\mysql-5.7.31-win32
   ADDRESS_MODEL: 32
   #OPENSSL_ROOT_DIR: C:\OpenSSL-Win32
+  BITS: 32
   OPENSSL_VERSION: 1_1_1h
   OPENSSL_DIR: C:\OpenSSL
 build_script:
