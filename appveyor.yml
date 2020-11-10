@@ -2,6 +2,7 @@ version: 1.0.{build}
 cache:
     - C:\mysql-5.7.31-win32
     - C:\OpenSSL
+    - C:\projects
 platform: x86
 build:
   parallel: true
