@@ -25,7 +25,6 @@ build_script:
 
         if (Test-Path env:OPENSSL_VERSION) { Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" }
 
-        if defined OPENSSL_VERSION Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
 
         if (Test-Path "C:\mysql-5.7.31-win32") {
             echo "using mysql-5.7.31-win32 from cache"
@@ -50,7 +49,8 @@ build_script:
 - cmd: >-
     chcp 65001
 
-    
+    if defined OPENSSL_VERSION Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+
     git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
     git tag -a -m "AppVeyor build" init
