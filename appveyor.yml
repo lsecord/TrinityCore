@@ -1,6 +1,6 @@
 version: 1.0.{build}
 cache:
-    - c:\mysql-5.7.9-win32
+    - c:\mysql-5.7.31-win32
 platform: x86
 build:
   parallel: true
