@@ -64,7 +64,7 @@ build_script:
 
     cd bin\RelWithDebInfo\
 
-    copy "C:\mysql-5.7.31-win32\bin\bin\mysql.exe" mysql.exe
+    copy "C:\mysql-5.7.31-win32\bin\mysql.exe" mysql.exe
 
     copy "C:\mysql-5.7.31-win32\lib\libmysql.dll" libmysql.dll
 
