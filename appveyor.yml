@@ -64,11 +64,13 @@ build_script:
 
     cd bin\RelWithDebInfo\
 
+    copy "C:\mysql-5.7.31-win32\bin\bin\mysql.exe" mysql.exe
+
     copy "C:\mysql-5.7.31-win32\lib\libmysql.dll" libmysql.dll
 
-    copy "%OPENSSL_ROOT_DIR%\ssleay32.dll" ssleay32.dll
+    copy "%OPENSSL_DIR%\ssleay32.dll" ssleay32.dll
 
-    copy "%OPENSSL_ROOT_DIR%\libeay32.dll" libeay32.dll
+    copy "%OPENSSL_DIR%\libeay32.dll" libeay32.dll
 
     cd ..
 
