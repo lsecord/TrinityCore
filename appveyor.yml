@@ -13,16 +13,17 @@ environment:
   ADDRESS_MODEL: 32
   OPENSSL_ROOT_DIR: C:\OpenSSL-Win32
 build_script:
-- cmd: >-
-    chcp 65001
-   
-    echo "downloading mysql-5.7.9-win32"
+
+- ps: | 
+      echo "downloading mysql-5.7.9-win32"
     
     Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
     
     echo "installing mysql-5.7.31-win32.zip"
     
     7z x -y mysql-5.7.31-win32.zip -oc:\Program Files\MySQL\MySQL Server 5.7
+- cmd: >-
+    chcp 65001
 
     git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
