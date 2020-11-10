@@ -21,7 +21,7 @@ environment:
 build_script:
 
 - pwsh: | 
-mkdir -p C:\OpenSSL
+        mkdir -p C:\OpenSSL
 
         if (Test-Path env:OPENSSL_VERSION) { Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" }
 
