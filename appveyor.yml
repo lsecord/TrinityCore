@@ -34,7 +34,9 @@ build_script:
         }
         else
         {
+
         mkdir -p C:\OpenSSL
+
         Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
 
         cmd
@@ -44,7 +46,7 @@ build_script:
         rem Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
 
         }
-        
+
         if (Test-Path "C:\mysql-5.7.31-win32") {
             echo "using mysql-5.7.31-win32 from cache"
         }
