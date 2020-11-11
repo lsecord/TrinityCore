@@ -63,12 +63,11 @@ jobs:
   build-windowsx86:
    # needs: [create_release]
     runs-on: windows-latest
-    steps:
-    - env:
+    env:
          OPENSSL_DIR: C:\OpenSSL
          OPENSSL_VERSION: 1_1_1h
          BITS: 32
-    
+    steps:
     - name: Cache
       id: WindowsCache
       uses: actions/cache@v2.1.3
