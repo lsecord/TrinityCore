@@ -5,7 +5,9 @@ cache:
     - C:\mysql-5.7.31-win32
     - C:\OpenSSL
     - C:\projects
-platform: x86
+platform:
+  - Win32
+  - x64
 build:
   parallel: true
   verbosity: detailed
@@ -14,17 +16,27 @@ clone_depth: 1
 init:
 - ps: ''
 environment:
-  BOOST_VER: x32-1.73
-  BOOST_ROOT: C:\Libraries\boost_1_73_0
-  BOOST_LIBS: C:\Libraries\boost_1_73_0\lib32-msvc-14.2
-  MYSQL_HOME: C:\mysql-5.7.31-win32
-  ADDRESS_MODEL: 32
-  BITS: 32
-  OPENSSL_VERSION: 1_1_1h
-  OPENSSL_DIR: C:\OpenSSL
-build_script: 
+  matrix:
+  - platform: Win32
+    BOOST_VER: x32-1.73
+    BOOST_ROOT: C:\Libraries\boost_1_73_0
+    BOOST_LIBS: C:\Libraries\boost_1_73_0\lib32-msvc-14.2
+    MYSQL_HOME: C:\mysql-5.7.31-win32
+    ADDRESS_MODEL: 32
+    ITS: 32
+    OPENSSL_VERSION: 1_1_1h
+    OPENSSL_DIR: C:\OpenSSL
 
-- pwsh: | 
+  - platform: Win32
+    BOOST_ROOT: C:\Libraries\boost_1_71_0
+    OPENSSL_ROOT_DIR: C:\OpenSSL-Win64
+
+matrix:
+  only:
+    - platform: Win32
+  build_script: 
+
+  - pwsh: | 
 
         echo ${env:APPVEYOR_BUILD_FOLDER}
 
@@ -66,7 +78,7 @@ build_script:
 
         Get-ChildItem C:\OpenSSL
 
-- cmd: >-
+  - cmd: >-
     chcp 65001
 
     git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
@@ -97,11 +109,52 @@ build_script:
 
     7z a -t7z TrinityCoreWin32VS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
-test: off
-artifacts:
-- path: build\bin\TrinityCoreWin32SymbolsVS2019.7z
-  name: TrinityCoreWin32SymbolsVS2019
+  test: off
+  artifacts:
+  - path: build\bin\TrinityCoreWin32SymbolsVS2019.7z
+    name: TrinityCoreWin32SymbolsVS2019
 
-- path: build\bin\TrinityCoreWin32VS2019.7z
-  name: TrinityCoreWin32VS2019
+  - path: build\bin\TrinityCoreWin32VS2019.7z
+    name: TrinityCoreWin32VS2019
 
+
+matrix:
+  only:
+    - platform: x64
+  build_script: 
+  - cmd: >-
+    chcp 65001
+    
+    git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
+
+    git tag -a -m "AppVeyor build" init
+
+    md build && cd build
+
+    cmake -G"Visual Studio 16 2019" -A x64 -DTOOLS=True -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" ..
+
+    "%programfiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\amd64\MsBuild.exe" /p:source-charset=utf-8 /nologo /m:2 /p:Configuration=RelWithDebInfo /p:Platform="X64" /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "TrinityCore.sln"
+
+    cd bin\RelWithDebInfo\
+
+    copy "C:\Program Files\MySQL\MySQL Server 5.7\lib\libmysql.dll" libmysql.dll
+
+    copy "%OPENSSL_ROOT_DIR%\ssleay32.dll" ssleay32.dll
+
+    copy "%OPENSSL_ROOT_DIR%\libeay32.dll" libeay32.dll
+
+    cd ..
+
+    7z a -t7z TrinityCoreWin64SymbolsVS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
+
+    del /F /Q /S "RelWithDebInfo\*.pdb" > NUL
+
+    7z a -t7z TrinityCoreWin64VS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
+
+  test: off
+  artifacts:
+  - path: build\bin\TrinityCoreWin64SymbolsVS2019.7z
+    name: TrinityCoreWin64SymbolsVS2019
+
+  - path: build\bin\TrinityCoreWin64VS2019.7z
+    name: TrinityCoreWin64VS2019
