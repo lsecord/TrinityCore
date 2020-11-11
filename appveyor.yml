@@ -43,7 +43,7 @@ build_script:
 
             $pathexe = "Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe"
 
-            & $pathexe $arguments
+            Invoke-Expression "$pathexe $arguments"
 
             Get-ChildItem C:\OpenSSL
 
