@@ -1,8 +1,5 @@
 version: 1.0.{build}
 configuration: Release
-platform:
-  - Win32
-  - x64
 build:
   parallel: true
   verbosity: detailed
