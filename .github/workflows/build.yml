@@ -112,8 +112,10 @@ jobs:
         else
         {
             echo "downloading boost"
-            $url64 = "https://bintray.com/boostorg/release/download_file?file_path=1.74.0%2Fbinaries%2Fboost_1_74_0-msvc-14.1-32.exe"
-            $url86 = "https://bintray.com/boostorg/release/download_file?file_path=1.74.0%2Fbinaries%2Fboost_1_74_0-msvc-14.1-64.exe"
+            <# $url64 = "https://bintray.com/boostorg/release/download_file?file_path=1.74.0%2Fbinaries%2Fboost_1_74_0-msvc-14.1-32.exe"
+            $url86 = "https://bintray.com/boostorg/release/download_file?file_path=1.74.0%2Fbinaries%2Fboost_1_74_0-msvc-14.1-64.exe" #>
+            $url64 = "https://bintray.com/boostorg/release/download_file?file_path=1.73.0%2Fbinaries%2Fboost_1_73_0-msvc-14.2-64.exe"
+            $url86 = "https://bintray.com/boostorg/release/download_file?file_path=1.73.0%2Fbinaries%2Fboost_1_73_0-msvc-14.2-32.exe"
             $path = "C:\boost.exe"
             [Net.WebClient]::new().DownloadFile($url86, $path)
             Start-Process C:\boost.exe -ArgumentList "/DIR=C:\boost","/VERYSILENT" -Wait
