@@ -65,6 +65,7 @@ jobs:
     runs-on: windows-latest
     env:
          OPENSSL_DIR: C:\OpenSSL
+         Boost_DIR: C:\boost
          OPENSSL_VERSION: 1_1_1h
          BITS: 32
     steps:
@@ -117,10 +118,11 @@ jobs:
             Start-Process C:\boost.exe -ArgumentList "/DIR=C:\boost","/VERYSILENT" -Wait
         }
             Get-ChildItem C:\boost
-            $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
-            $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
-            $Boost_DIR = "C:\boost"
-            $env:BOOST_ROOT=$env:Boost_DIR
+            set $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
+            set $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
+            set $Boost_DIR = "C:\boost"
+            set $env:BOOST_ROOT="C:\boost"
+            
             Get-ChildItem C:\mysql-5.7.31-win32
             Get-ChildItem C:\OpenSSL
     - name: Checkout
@@ -135,7 +137,7 @@ jobs:
         chcp 65001
         mkdir bin
         cd bin
-        cmake ../ -A win32 -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DOPENSSL_ROOT_DIR:PATH="$OPENSSL_DIR" -DLIB_EAY_RELEASE:FILEPATH="$OPENSSL_DIR\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="$OPENSSL_DIR\include" -DSSL_EAY_RELEASE:FILEPATH="$OPENSSL_DIR\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="$OPENSSL_DIR\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="$OPENSSL_DIR\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DMYSQL_INCLUDE_DIR:PATH=$env:INCLUDE/include" -DMYSQL_LIBRARY:FILEPATH="$env:LIB/lib/libmysql.lib" -DBoost_DIR:PATH="$Boost_DIR" 
+        cmake ../ -A win32 -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DOPENSSL_ROOT_DIR:PATH="%OPENSSL_DIR%" -DLIB_EAY_RELEASE:FILEPATH="%OPENSSL_DIR%\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="%OPENSSL_DIR%\include" -DSSL_EAY_RELEASE:FILEPATH="%OPENSSL_DIR%\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="%OPENSSL_DIR%\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="%OPENSSL_DIR%\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DMYSQL_INCLUDE_DIR:PATH=%INCLUDE%/include" -DMYSQL_LIBRARY:FILEPATH="%LIB%/lib/libmysql.lib" -DBoost_DIR:PATH="%Boost_DIR%" 
         cmake --build . --config Release
         copy "%OPENSSL_DIR%\libssl-1_1.dll" ssleay32.dll
         copy "%OPENSSL_DIR%\libcrypto-1_1.dll" libeay32.dll
