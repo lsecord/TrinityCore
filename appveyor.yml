@@ -36,6 +36,7 @@ for:
   cache:
     - C:\mysql-5.7.31-win32
     - C:\OpenSSL
+    - ${env:APPVEYOR_BUILD_FOLDER}\src
   build_script: 
   - pwsh: | 
 
