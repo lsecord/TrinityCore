@@ -33,7 +33,7 @@ environment:
 
 matrix:
   only:
-    - platform: Win32
+  - platform: Win32
   build_script: 
 
   - pwsh: | 
@@ -120,7 +120,7 @@ matrix:
 
 matrix:
   only:
-    - platform: x64
+  - platform: x64
   build_script: 
   - cmd: >-
     chcp 65001
