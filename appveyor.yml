@@ -36,7 +36,7 @@ for:
       only:
       - platform: Win32
       build_script: 
-      - pwsh: | 
+      - pwsh: |
 
               echo ${env:APPVEYOR_BUILD_FOLDER}
 
@@ -62,7 +62,9 @@ for:
               else
              {
 
+                  echo "downloading mysql-5.7.31-win32"
 
+                  Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
 
                   echo "installing mysql-5.7.31-win32.zip"
 
