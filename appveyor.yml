@@ -39,11 +39,11 @@ build_script:
 
             Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
 
-            $arguments = @('/DIR=$env:OPENSSL_DIR', '/SILENT','/VERYSILENT', '/SP-')
+            $arguments = '/DIR=$env:OPENSSL_DIR', '/SILENT','/VERYSILENT', '/SP-'
 
             $pathexe = "Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe"
 
-            Start-Process -Filepath $pathexe -ArgumentList $arguments
+            $pathexe $arguments
 
             Get-ChildItem C:\OpenSSL
 
