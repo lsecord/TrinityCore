@@ -28,9 +28,12 @@ build_script:
      echo %APPVEYOR_BUILD_FOLDER%
 
 - pwsh: | 
-        mkdir -p C:\OpenSSL
 
-        if (Test-Path env:OPENSSL_VERSION) { Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" }
+        if (Test-Path env:OPENSSL_VERSION) 
+        {
+        mkdir -p C:\OpenSSL
+        Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
+        }
 
 
         if (Test-Path "C:\mysql-5.7.31-win32") {
