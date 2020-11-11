@@ -40,45 +40,6 @@ for:
 
               echo ${env:APPVEYOR_BUILD_FOLDER}
 
-              if (Test-Path "C:\OpenSSL") {
-                  echo "using OpenSSL_1_1_1h from cache"
-
-                  Get-ChildItem $env:OPENSSL_DIR
-              }
-              else
-              {
-
-                  mkdir -p C:\OpenSSL
-
-                  Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
-
-                  &.\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-              }
-
-              if (Test-Path "C:\mysql-5.7.31-win32") {
-
-                  echo "using mysql-5.7.31-win32 from cache"
-              }
-              else
-             {
-
-                  echo "downloading mysql-5.7.31-win32"
-
-                  Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
-
-                  echo "installing mysql-5.7.31-win32.zip"
-
-                  7z x -y mysql-5.7.31-win32.zip -oC:\
-              }
-                  $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
-                  $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
-
-                  Get-ChildItem C:\mysql-5.7.31-win32
-
-                  Get-ChildItem C:\Libraries
-
-                  Get-ChildItem C:\OpenSSL
-
       - cmd: >-
            chcp 65001
 
