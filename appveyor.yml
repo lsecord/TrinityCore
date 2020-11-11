@@ -48,13 +48,12 @@ build_script:
 
         Get-ChildItem C:\Libraries
 
-        Get-ChildItem C:\OpenSSL
 
 - cmd: >-
     chcp 65001
 
     if defined OPENSSL_VERSION Win%BITS%OpenSSL-%OPENSSL_VERSION%.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-
+    Get-ChildItem C:\OpenSSL
     git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
     git tag -a -m "AppVeyor build" init
