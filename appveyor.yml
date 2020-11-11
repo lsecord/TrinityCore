@@ -79,35 +79,35 @@ matrix:
         Get-ChildItem C:\OpenSSL
 
   - cmd: >-
-    chcp 65001
+        chcp 65001
 
-    git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
+        git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
-    git tag -a -m "AppVeyor build" init
+        git tag -a -m "AppVeyor build" init
 
-    md build && cd build
+        md build && cd build
 
-    cmake -G"Visual Studio 16 2019" -A win32 -DTOOLS=True -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DMYSQL_INCLUDE_DIR:PATH="C:\mysql-5.7.31-win32\include" -DMYSQL_LIBRARY:FILEPATH="C:\mysql-5.7.31-win32/lib/libmysql.lib" ..
+        cmake -G"Visual Studio 16 2019" -A win32 -DTOOLS=True -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DMYSQL_INCLUDE_DIR:PATH="C:\mysql-5.7.31-win32\include" -DMYSQL_LIBRARY:FILEPATH="C:\mysql-5.7.31-win32/lib/libmysql.lib" ..
 
-    "%programfiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MsBuild.exe" /p:source-charset=utf-8 /nologo /m:2 /p:Configuration=RelWithDebInfo /p:Platform="win32" /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "TrinityCore.sln"
+        "%programfiles(x86)%\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MsBuild.exe" /p:source-charset=utf-8 /nologo /m:2 /p:Configuration=RelWithDebInfo /p:Platform="win32" /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "TrinityCore.sln"
 
-    cd bin\RelWithDebInfo\
+        cd bin\RelWithDebInfo\
 
-    copy "C:\mysql-5.7.31-win32\bin\mysql.exe" mysql.exe
+        copy "C:\mysql-5.7.31-win32\bin\mysql.exe" mysql.exe
 
-    copy "C:\mysql-5.7.31-win32\lib\libmysql.dll" libmysql.dll
+        copy "C:\mysql-5.7.31-win32\lib\libmysql.dll" libmysql.dll
 
-    copy "%OPENSSL_DIR%\libssl-1_1.dll" ssleay32.dll
+        copy "%OPENSSL_DIR%\libssl-1_1.dll" ssleay32.dll
 
-    copy "%OPENSSL_DIR%\libcrypto-1_1.dll" libeay32.dll
+        copy "%OPENSSL_DIR%\libcrypto-1_1.dll" libeay32.dll
 
-    cd ..
+        cd ..
 
-    7z a -t7z TrinityCoreWin32SymbolsVS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
+        7z a -t7z TrinityCoreWin32SymbolsVS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
-    del /F /Q /S "RelWithDebInfo\*.pdb" > NUL
+        del /F /Q /S "RelWithDebInfo\*.pdb" > NUL
 
-    7z a -t7z TrinityCoreWin32VS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
+        7z a -t7z TrinityCoreWin32VS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
   test: off
   artifacts:
