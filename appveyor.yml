@@ -4,11 +4,14 @@ build:
   parallel: true
   verbosity: detailed
 image: Visual Studio 2019
-
-#clone_depth: 1
-
+clone_depth: 1
 init:
 - ps: ''
+- run: |
+
+           git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
+
+           git tag -a -m "AppVeyor build" " "
 environment:
   matrix:
   - job_name: Windows x86
@@ -80,10 +83,6 @@ for:
   - cmd: >-
            chcp 65001
 
-           git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
-
-           git tag -a -m "AppVeyor build" " "
-
            md build && cd build
 
            cmake -G"Visual Studio 16 2019" -A win32 -DTOOLS=True -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DMYSQL_INCLUDE_DIR:PATH="C:\mysql-5.7.31-win32\include" -DMYSQL_LIBRARY:FILEPATH="C:\mysql-5.7.31-win32/lib/libmysql.lib" ..
@@ -126,10 +125,6 @@ for:
   build_script: 
   - cmd: >-
            chcp 65001
-    
-           git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
-
-           git tag -a -m "AppVeyor build" init
 
            md build && cd build
 
