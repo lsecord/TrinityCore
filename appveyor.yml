@@ -22,12 +22,11 @@ environment:
   BITS: 32
   OPENSSL_VERSION: 1_1_1h
   OPENSSL_DIR: C:\OpenSSL
-build_script:
-
-- cmd: >-
-     echo %APPVEYOR_BUILD_FOLDER%
+build_script: 
 
 - pwsh: | 
+
+        echo env:APPVEYOR_BUILD_FOLDER
 
         if (Test-Path "C:\OpenSSL") {
             echo "using OpenSSL_1_1_1h from cache"
@@ -44,7 +43,6 @@ build_script:
 
         rem Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
 
-        PowerShell
         }
         
         if (Test-Path "C:\mysql-5.7.31-win32") {
