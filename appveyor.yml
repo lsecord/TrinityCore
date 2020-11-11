@@ -41,7 +41,7 @@ build_script:
         Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
 
 
-        if (${env:OPENSSL_VERSION}) {& .\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"}
+        if (${env:OPENSSL_VERSION}) {Start-Process .\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"}
 
 
         }
