@@ -77,7 +77,7 @@ jobs:
         path: | 
              C:\OpenSSL
              C:\mysql-5.7.31-win32
-        key: ${{ runner.os }}-${{ cache-name }}
+        key: ${{ runner.os }}-${{ env.cache-name }}-
     - name: Cache_lib
       if: steps.WindowsCache.outputs.cache-hit == 'false'
       shell: powershell
