@@ -36,7 +36,6 @@ for:
       - platform: Win32
     build_script: 
     - pwsh: | 
-
               echo ${env:APPVEYOR_BUILD_FOLDER}
 
               if (Test-Path "C:\OpenSSL") {
