@@ -43,6 +43,9 @@ build_script:
 
             Get-ChildItem C:\OpenSSL
 
+            echo "Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION} installed"
+
+            echo Get-ChildItem C:\OpenSSL
         }
 
         if (Test-Path "C:\mysql-5.7.31-win32") {
