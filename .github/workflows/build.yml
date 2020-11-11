@@ -120,9 +120,7 @@ jobs:
       shell: cmd
       run: |
         chcp 65001
-        #cmd
         set BOOST_ROOT=%BOOST_ROOT_1_73_0%
-        $powershell
         echo ${{ github.repository }}
         $env:BOOST_ROOT=$env:BOOST_ROOT_1_73_0
         mkdir bin
@@ -131,8 +129,8 @@ jobs:
         cmake --build . --config Release
         copy "%OPENSSL_DIR%\libssl-1_1.dll" ssleay32.dll
         copy "%OPENSSL_DIR%\libcrypto-1_1.dll" libeay32.dll
-        Copy-Item C:\mysql-5.7.31-win32\lib\libmysql.dll -Destination .\bin\Release\
-        Copy-Item C:\mysql-5.7.31-win32\bin\mysql.exe -Destination .\bin\Release\
+        copy C:\mysql-5.7.31-win32\lib\libmysql.dll -Destination .\bin\Release\
+        Copy C:\mysql-5.7.31-win32\bin\mysql.exe -Destination .\bin\Release\
         echo $GITHUB_WORKSPACE
     #- name: Check executables
       #run: |
