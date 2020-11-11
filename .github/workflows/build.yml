@@ -83,47 +83,46 @@ jobs:
     #  if: steps.WindowsCache.outputs.cache-hit != 'true'
       shell: powershell
       run: |
-              if (Test-Path "C:\OpenSSL") {
-                  echo "using OpenSSL_1_1_1h from cache"
-                  Get-ChildItem $env:OPENSSL_DIR
-              }
-              else
-              {
-                  mkdir -p C:\OpenSSL
-                  Invoke-WebRequest "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" -OutFile Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe
-                  &.\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-              }
-              
-              if (Test-Path "C:\mysql-5.7.31-win32") {
-                  echo "using mysql-5.7.31-win32 from cache"
-              }
-              else
-              {
-                  echo "downloading mysql-5.7.31-win32"
-                  Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
-                  echo "installing mysql-5.7.31-win32.zip"
-                  7z x -y mysql-5.7.31-win32.zip -oC:\
-              }
-              if (Test-Path "C:\boost") {
-                  echo "using C:\boost from cache"
-              }
-              else
-              {
-                  echo "downloading boost"
-                  $url64 = "https://bintray.com/boostorg/release/download_file?file_path=1.74.0%2Fbinaries%2Fboost_1_74_0-msvc-14.1-32.exe"
-                  $url86 = "https://bintray.com/boostorg/release/download_file?file_path=1.74.0%2Fbinaries%2Fboost_1_74_0-msvc-14.1-64.exe"
-                  $path = "C:\boost.exe"
-                  [Net.WebClient]::new().DownloadFile($url86, $path)
-                  Start-Process C:\boost.exe -ArgumentList "/DIR=C:\boost","/VERYSILENT" -Wait
-              }
-
-                  Get-ChildItem C:\boost
-                  $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
-                  $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
-                  $Boost_DIR = "C:\boost"
-                  $env:BOOST_ROOT=$env:Boost_DIR
-                  Get-ChildItem C:\mysql-5.7.31-win32
-                  Get-ChildItem C:\OpenSSL
+        if (Test-Path "C:\OpenSSL") {
+            echo "using OpenSSL_1_1_1h from cache"
+            Get-ChildItem $env:OPENSSL_DIR
+        }
+        else
+        {
+            mkdir -p C:\OpenSSL
+            Invoke-WebRequest "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" -OutFile Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe
+            &.\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+        }
+        
+        if (Test-Path "C:\mysql-5.7.31-win32") {
+            echo "using mysql-5.7.31-win32 from cache"
+        }
+        else
+        {
+            echo "downloading mysql-5.7.31-win32"
+            Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
+            echo "installing mysql-5.7.31-win32.zip"
+            7z x -y mysql-5.7.31-win32.zip -oC:\
+        }
+        if (Test-Path "C:\boost") {
+            echo "using C:\boost from cache"
+        }
+        else
+        {
+            echo "downloading boost"
+            $url64 = "https://bintray.com/boostorg/release/download_file?file_path=1.74.0%2Fbinaries%2Fboost_1_74_0-msvc-14.1-32.exe"
+            $url86 = "https://bintray.com/boostorg/release/download_file?file_path=1.74.0%2Fbinaries%2Fboost_1_74_0-msvc-14.1-64.exe"
+            $path = "C:\boost.exe"
+            [Net.WebClient]::new().DownloadFile($url86, $path)
+            Start-Process C:\boost.exe -ArgumentList "/DIR=C:\boost","/VERYSILENT" -Wait
+        }
+            Get-ChildItem C:\boost
+            $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
+            $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
+            $Boost_DIR = "C:\boost"
+            $env:BOOST_ROOT=$env:Boost_DIR
+            Get-ChildItem C:\mysql-5.7.31-win32
+            Get-ChildItem C:\OpenSSL
     - name: Checkout
       uses: actions/checkout@v2
     - name: setup-msbuild
