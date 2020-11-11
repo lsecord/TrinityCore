@@ -82,11 +82,11 @@ jobs:
       if: steps.WindowsCache.outputs.cache-hit != 'true'
       shell: powershell
       run: |
-         $op_Path=${env:OPENSSL_DIR}
-         echo "::set-env name=OPENSSL_DIR::$qt_Path"
-         echo "using OpenSSL_1_1_1h from cache"
-         Get-ChildItem $env:OPENSSL_DIR
-                       if (Test-Path "C:\OpenSSL") {
+              $op_Path=${env:OPENSSL_DIR}
+              echo "::set-env name=OPENSSL_DIR::$qt_Path"
+              echo "using OpenSSL_1_1_1h from cache"
+              Get-ChildItem $env:OPENSSL_DIR
+              if (Test-Path "C:\OpenSSL") {
                   echo "using OpenSSL_1_1_1h from cache"
                   Get-ChildItem $env:OPENSSL_DIR
               }
