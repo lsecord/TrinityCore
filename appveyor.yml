@@ -39,7 +39,9 @@ build_script:
 
             Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
 
-            & .\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+            $arguments = "/DIR=$env:OPENSSL_DIR", '/SILENT','/VERYSILENT', '/SP-'
+
+            .\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe  $arguments
 
             Get-ChildItem C:\OpenSSL
 
