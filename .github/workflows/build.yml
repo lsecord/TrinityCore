@@ -1,9 +1,9 @@
 name: win64/linux
 on:
- # release:
-  #  types:
-    #  - created
-     pull_request:
+ push:
+  
+ pull_request:
+
       
 # push:
    # tags: 
