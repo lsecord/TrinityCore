@@ -41,7 +41,9 @@ build_script:
 
             $arguments = "/DIR=$env:OPENSSL_DIR", '/SILENT','/VERYSILENT', '/SP-'
 
-            Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe  $arguments
+            $pathexe = Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe
+
+            $pathexe $arguments
 
             Get-ChildItem C:\OpenSSL
 
