@@ -79,7 +79,7 @@ jobs:
              C:\mysql-5.7.31-win32
         key: ${{ runner.os }}-${{ env.cache-name }}-
     - name: Cache_lib
-      if: steps.WindowsCache.outputs.cache-hit == 'false'
+      if: steps.WindowsCache.outputs.cache-hit != 'true'
       shell: powershell
       run: |
          $op_Path=${env:OPENSSL_DIR}
