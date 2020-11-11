@@ -1,4 +1,6 @@
 version: 1.0.{build}
+configuration: Release
+
 cache:
     - C:\mysql-5.7.31-win32
     - C:\OpenSSL
@@ -21,6 +23,9 @@ environment:
   OPENSSL_VERSION: 1_1_1h
   OPENSSL_DIR: C:\OpenSSL
 build_script:
+
+- cmd: >-
+     echo %APPVEYOR_BUILD_FOLDER%
 
 - pwsh: | 
         mkdir -p C:\OpenSSL
