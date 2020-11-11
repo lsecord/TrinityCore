@@ -78,6 +78,10 @@ build_script:
 - cmd: >-
     chcp 65001
 
+    cd C:\OpenSSL
+
+    dir
+
     git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
     git tag -a -m "AppVeyor build" init
