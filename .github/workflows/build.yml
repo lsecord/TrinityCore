@@ -63,7 +63,7 @@ jobs:
   build-windowsx86:
    # needs: [create_release]
     runs-on: windows-latest
-    outputs: | 
+    outputs:
       OPENSSL_DIR: C:\OpenSSL
       OPENSSL_VERSION: 1_1_1h
       BITS: 32
