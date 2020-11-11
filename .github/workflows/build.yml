@@ -118,10 +118,10 @@ jobs:
             Start-Process C:\boost.exe -ArgumentList "/DIR=C:\boost","/VERYSILENT" -Wait
         }
             Get-ChildItem C:\boost
-            set $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
-            set $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
-            set $Boost_DIR = "C:\boost"
-            set $env:BOOST_ROOT="C:\boost"
+            $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
+            $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
+            $env:Boost_DIR = "C:\boost"
+            $env:BOOST_ROOT="C:\boost"
             
             Get-ChildItem C:\mysql-5.7.31-win32
             Get-ChildItem C:\OpenSSL
