@@ -29,7 +29,10 @@ build_script:
 
 - pwsh: | 
 
-        if (Test-Path env:OPENSSL_VERSION) 
+        if (Test-Path "C:\OpenSSL") 
+            echo "using OpenSSL_1_1_1h from cache"
+        }
+        else
         {
         mkdir -p C:\OpenSSL
         Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
