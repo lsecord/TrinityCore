@@ -72,9 +72,11 @@ jobs:
       uses: actions/cache@v2.1.3
       with:
         path: | 
+             ${{ github.workspace }}
              C:\OpenSSL
              D:\a\TrinityCore
              C:\mysql-5.7.31-win32
+        key: venv-${{ github.ref }}-${{ hashFiles('requirements.txt') }}
     - name: Checkout
       uses: actions/checkout@v2
     - name: setup-msbuild
