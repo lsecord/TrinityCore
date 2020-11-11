@@ -69,7 +69,8 @@ build_script:
 
         Get-ChildItem C:\Libraries
 
-       Get-ChildItem C:\OpenSSL
+        Get-ChildItem C:\OpenSSL
+
 - cmd: >-
     chcp 65001
 
