@@ -30,12 +30,12 @@ environment:
   - platform: Win32
     BOOST_ROOT: C:\Libraries\boost_1_71_0
     OPENSSL_ROOT_DIR: C:\OpenSSL-Win64
-  -
+for:
+-
     matrix:
       only:
       - platform: Win32
       build_script: 
-
       - pwsh: | 
 
             echo ${env:APPVEYOR_BUILD_FOLDER}
