@@ -31,6 +31,7 @@ build_script:
 
         if (Test-Path "C:\OpenSSL") {
             echo "using OpenSSL_1_1_1h from cache"
+
             Get-ChildItem env:OPENSSL_DIR
         }
         else
@@ -47,6 +48,7 @@ build_script:
         }
 
         if (Test-Path "C:\mysql-5.7.31-win32") {
+
             echo "using mysql-5.7.31-win32 from cache"
         }
         else
@@ -68,6 +70,7 @@ build_script:
 
 - cmd: >-
     chcp 65001
+
     git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
     git tag -a -m "AppVeyor build" init
