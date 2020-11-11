@@ -169,19 +169,24 @@ jobs:
          asset_name: TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win32.7z
          asset_content_type: application/7z
   build-windowsx64:
-    needs: [create_release]
+    #needs: [create_release]
     runs-on: windows-latest
     steps:
     - name: Cache
+      id: WindowsCache
       uses: actions/cache@v2.1.3
+      env:
+       cache-name: vcpkg+openssl
       with:
         path: | 
-             C:\vcpkg
+             C:\vcpkg\installed
+        key: ${{ runner.os }}-${{ env.cache-name }}-
     - name: Checkout
       uses: actions/checkout@v2
     - name: setup-msbuild
       uses: microsoft/setup-msbuild@v1
     - name: add lib
+      if: steps.WindowsCache.outputs.cache-hit != 'true'
       run: |
          vcpkg update
          vcpkg integrate install
