@@ -3,6 +3,7 @@ configuration: Release
 
 cache:
     - C:\mysql-5.7.31-win32
+    - C:\OpenSSL
     - C:\projects
 platform: x86
 build:
@@ -39,17 +40,7 @@ build_script:
 
             Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
 
-            $arguments = '/DIR=$env:OPENSSL_DIR', '/SILENT','/VERYSILENT', '/SP-'
-
-            $pathexe = "Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe"
-
             &.\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-
-            Get-ChildItem C:\OpenSSL
-
-            echo "Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION} installed"
-
-            echo Get-ChildItem C:\OpenSSL
         }
 
         if (Test-Path "C:\mysql-5.7.31-win32") {
@@ -77,10 +68,6 @@ build_script:
 
 - cmd: >-
     chcp 65001
-
-    cd C:\OpenSSL
-
-    dir
 
     git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
