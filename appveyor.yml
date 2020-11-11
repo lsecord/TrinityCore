@@ -78,9 +78,9 @@ for:
   - cmd: >-
            chcp 65001
 
-           #git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
+           git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
 
-           #git tag -a -m "AppVeyor build" init
+           git tag -a -m "AppVeyor build" " "
 
            md build && cd build
 
