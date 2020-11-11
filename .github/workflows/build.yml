@@ -77,7 +77,7 @@ jobs:
              C:\mysql-5.7.31-win32
         key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
     - name: Cache_lib
-      if: steps.WindowsCache.outputs.cache-hit == 'flase'
+      if: steps.WindowsCache.outputs.cache-hit == 'false'
       shell: powershell
       run: |
          $op_Path=${env:OPENSSL_DIR}
