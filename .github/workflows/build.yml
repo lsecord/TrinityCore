@@ -64,6 +64,11 @@ jobs:
    # needs: [create_release]
     runs-on: windows-latest
     steps:
+    - env:
+         OPENSSL_DIR: C:\OpenSSL
+         OPENSSL_VERSION: 1_1_1h
+         BITS: 32
+    
     - name: Cache
       id: WindowsCache
       uses: actions/cache@v2.1.3
@@ -73,29 +78,14 @@ jobs:
              C:\mysql-5.7.31-win32
         key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
     - name: Cache_lib
-      if: steps.WindowsCacheQt.outputs.cache-hit == 'true'
-      env:
-          OPENSSL_DIR: C:\OpenSSL
-          OPENSSL_VERSION: 1_1_1h
-          BITS: 32
+      if: steps.WindowsCache.outputs.cache-hit == 'flase'
+      shell: powershell
       run: |
          $op_Path=${env:OPENSSL_DIR}
          echo "::set-env name=OPENSSL_DIR::$qt_Path"
-    
-    
-    
-    
-    
-    
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: setup-msbuild
-      uses: microsoft/setup-msbuild@v1
-    - name: add lib
-      shell: powershell
-      run: |
-              $powershell
-              if (Test-Path "C:\OpenSSL") {
+         echo "using OpenSSL_1_1_1h from cache"
+         Get-ChildItem $env:OPENSSL_DIR
+                       if (Test-Path "C:\OpenSSL") {
                   echo "using OpenSSL_1_1_1h from cache"
                   Get-ChildItem $env:OPENSSL_DIR
               }
@@ -105,6 +95,7 @@ jobs:
                   Invoke-WebRequest "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" -OutFile Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe
                   &.\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
               }
+              
               if (Test-Path "C:\mysql-5.7.31-win32") {
                   echo "using mysql-5.7.31-win32 from cache"
               }
@@ -120,6 +111,14 @@ jobs:
                   Get-ChildItem C:\mysql-5.7.31-win32
                   Get-ChildItem C:\Libraries
                   Get-ChildItem C:\OpenSSL
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: setup-msbuild
+      uses: microsoft/setup-msbuild@v1
+    - name: add lib
+      shell: powershell
+      run: |
+
 
     - name: Setup
       run: |
