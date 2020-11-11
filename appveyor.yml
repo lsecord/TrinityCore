@@ -117,12 +117,12 @@ matrix:
     - path: build\bin\TrinityCoreWin32VS2019.7z
       name: TrinityCoreWin32VS2019
 
- -
-   matrix:
-     only:
-     - platform: x64
-     build_script: 
-     - cmd: >-
+  -
+    matrix:
+      only:
+      - platform: x64
+      build_script: 
+      - cmd: >-
         chcp 65001
     
         git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
@@ -151,10 +151,10 @@ matrix:
 
         7z a -t7z TrinityCoreWin64VS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
-     test: off
-     artifacts:
-     - path: build\bin\TrinityCoreWin64SymbolsVS2019.7z
-       name: TrinityCoreWin64SymbolsVS2019
+      test: off
+      artifacts:
+      - path: build\bin\TrinityCoreWin64SymbolsVS2019.7z
+        name: TrinityCoreWin64SymbolsVS2019
 
-     - path: build\bin\TrinityCoreWin64VS2019.7z
-       name: TrinityCoreWin64VS2019
+      - path: build\bin\TrinityCoreWin64VS2019.7z
+        name: TrinityCoreWin64VS2019
