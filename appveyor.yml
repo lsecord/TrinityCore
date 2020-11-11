@@ -61,15 +61,13 @@ for:
               else
              {
 
+                 echo "downloading mysql-5.7.31-win32"
 
-                  echo "downloading mysql-5.7.31-win32"
+                 Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
 
+                 echo "installing mysql-5.7.31-win32.zip"
 
-                  Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
-
-                  echo "installing mysql-5.7.31-win32.zip"
-
-                  7z x -y mysql-5.7.31-win32.zip -oC:\
+                 7z x -y mysql-5.7.31-win32.zip -oC:\
               }
                   $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
                   $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
