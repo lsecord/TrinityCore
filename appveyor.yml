@@ -3,7 +3,6 @@ configuration: Release
 
 cache:
     - C:\mysql-5.7.31-win32
- #   - C:\OpenSSL
     - C:\projects
 platform: x86
 build:
