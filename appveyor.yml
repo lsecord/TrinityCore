@@ -4,7 +4,7 @@ build:
   parallel: true
   verbosity: detailed
 image: Visual Studio 2019
-clone_depth: 1
+#clone_depth: 1
 init:
 - ps: ''
 environment:
