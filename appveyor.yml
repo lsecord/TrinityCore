@@ -34,12 +34,12 @@ for:
     matrix:
       only:
       - platform: Win32
-      build_script: 
-      - pwsh: | 
+    build_script: 
+    - pwsh: | 
 
               echo ${env:APPVEYOR_BUILD_FOLDER}
 
-      - cmd: >-
+    - cmd: >-
            chcp 65001
 
            git config user.email "appveyor@build.bot" && git config user.name "AppVeyor"
