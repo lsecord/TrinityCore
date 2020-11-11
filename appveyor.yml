@@ -35,6 +35,7 @@ for:
 - matrix:
     only:
     - job_name: Windows x86
+      platform: Win32
   build_script: 
   - pwsh: | 
 
@@ -122,6 +123,7 @@ for:
 - matrix:
     only:
     - job_name: Windows x64
+      platform: x64
   build_script: 
   - cmd: >-
            chcp 65001
