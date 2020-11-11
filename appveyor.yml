@@ -1,9 +1,5 @@
 version: 1.0.{build}
 configuration: Release
-cache:
-    - C:\mysql-5.7.31-win32
-    - C:\OpenSSL
-    - C:\projects
 platform:
   - Win32
   - x64
@@ -36,6 +32,10 @@ for:
     only:
     - job_name: Windows x86
       platform: Win32
+  cache:
+    - C:\mysql-5.7.31-win32
+    - C:\OpenSSL
+    - C:\projects
   build_script: 
   - pwsh: | 
 
@@ -124,6 +124,8 @@ for:
     only:
     - job_name: Windows x64
       platform: x64
+  cache:
+    - C:\projects
   build_script: 
   - cmd: >-
            chcp 65001
