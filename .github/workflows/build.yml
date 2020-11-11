@@ -3,10 +3,11 @@ on:
  # release:
   #  types:
     #  - created
- push:
+     pull_request:
+      
+# push:
    # tags: 
    #   - 'v*'
-    pull_request:
 jobs:
   create_release:
     runs-on: ubuntu-latest
@@ -59,38 +60,71 @@ jobs:
      # with:
      #     name: upload_url
      #     path: ./upload_url.txt
-  
-  build-windows:
+  build-windowsx86:
    # needs: [create_release]
     runs-on: windows-latest
+    env:
+     OPENSSL_DIR: C:\OpenSSL
+     OPENSSL_VERSION: 1_1_1h
+     BITS: 32
     steps:
+    - name: Cache
+      uses: actions/cache@v2.1.3
+      with:
+        path: | 
+             C:\OpenSSL
+             D:\a\TrinityCore
+             C:\mysql-5.7.31-win32
     - name: Checkout
       uses: actions/checkout@v2
     - name: setup-msbuild
       uses: microsoft/setup-msbuild@v1
     - name: add lib
       run: |
-         vcpkg update
-         vcpkg integrate install
-         vcpkg install openssl:x86-windows
-         vcpkg install libmysql:x86-windows
-         Get-ChildItem C:\vcpkg\installed\x86-windows\bin
-         Get-ChildItem C:\vcpkg\installed\x86-windows\lib
-         Get-ChildItem C:\mysql-5.7.21-winx86
+              $powershell
+              echo ${env:APPVEYOR_BUILD_FOLDER}
+              if (Test-Path "C:\OpenSSL") {
+                  echo "using OpenSSL_1_1_1h from cache"
+                  Get-ChildItem $env:OPENSSL_DIR
+              }
+              else
+              {
+                  mkdir -p C:\OpenSSL
+                  Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe" 
+                  &.\Win${env:BITS}OpenSSL-${env:OPENSSL_VERSION}.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+              }
+              if (Test-Path "C:\mysql-5.7.31-win32") {
+                  echo "using mysql-5.7.31-win32 from cache"
+              }
+              else
+              {
+                  echo "downloading mysql-5.7.31-win32"
+                  Invoke-WebRequest "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.31-win32.zip" -OutFile mysql-5.7.31-win32.zip
+                  echo "installing mysql-5.7.31-win32.zip"
+                  7z x -y mysql-5.7.31-win32.zip -oC:\
+              }
+                  $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
+                  $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
+                  Get-ChildItem C:\mysql-5.7.31-win32
+                  Get-ChildItem C:\Libraries
+                  Get-ChildItem C:\OpenSSL
+
     - name: Setup
       run: |
         chcp 65001
         #cmd
-        set BOOST_ROOT=%BOOST_ROOT_1_72_0%
+        set BOOST_ROOT=%BOOST_ROOT_1_73_0%
         $powershell
         echo ${{ github.repository }}
-        $env:BOOST_ROOT=$env:BOOST_ROOT_1_72_0
+        $env:BOOST_ROOT=$env:BOOST_ROOT_1_73_0
         mkdir bin
         cd bin
         cmake ../ -A win32 -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DOPENSSL_ROOT_DIR:PATH="C:\vcpkg\installed\x86-windows" -DLIB_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="C:\vcpkg\installed\x86-windows\include" -DSSL_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DMYSQL_INCLUDE_DIR:PATH=C:\mysql-5.7.21-winx86/include" -DMYSQL_LIBRARY:FILEPATH="C:\mysql-5.7.21-winx86/lib/libmysql.lib" 
         cmake --build . --config Release
-        Copy-Item C:\mysql-5.7.21-winx86\lib\libmysql.dll -Destination .\bin\Release\
-        Copy-Item C:\mysql-5.7.21-winx86\bin\mysql.exe -Destination .\bin\Release\
+        copy "%OPENSSL_DIR%\libssl-1_1.dll" ssleay32.dll
+        copy "%OPENSSL_DIR%\libcrypto-1_1.dll" libeay32.dll
+        Copy-Item C:\mysql-5.7.31-win32\lib\libmysql.dll -Destination .\bin\Release\
+        Copy-Item C:\mysql-5.7.31-win32\bin\mysql.exe -Destination .\bin\Release\
         echo $GITHUB_WORKSPACE
     #- name: Check executables
       #run: |
@@ -103,6 +137,63 @@ jobs:
       # file/folder path to compress
         pathSource: D:\a\TrinityCore\TrinityCore\bin\bin\
     # 7z archive path to write
+        pathTarget: \TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win32.7z
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+         upload_url: ${{ needs.create_release.outputs.upload_url }}
+         asset_path: \TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win32.7z
+         asset_name: TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win32.7z
+         asset_content_type: application/7z
+  build-windowsx64:
+    needs: [create_release]
+    runs-on: windows-latest
+    steps:
+    - name: Cache
+      uses: actions/cache@v2.1.3
+      with:
+        path: | 
+             C:\vcpkg
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: setup-msbuild
+      uses: microsoft/setup-msbuild@v1
+    - name: add lib
+      run: |
+         vcpkg update
+         vcpkg integrate install
+         vcpkg install openssl:x64-windows
+         Get-ChildItem C:\vcpkg\installed\x64-windows\bin
+         Get-ChildItem C:\vcpkg\installed\x64-windows\lib
+    - name: Setup
+      run: |
+        chcp 65001
+        #cmd
+        set BOOST_ROOT=%BOOST_ROOT_1_72_0%
+        $powershell
+        echo ${{ github.repository }}
+        $env:BOOST_ROOT=$env:BOOST_ROOT_1_72_0
+        mkdir bin
+        cd bin
+        cmake ../ -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DOPENSSL_ROOT_DIR:PATH="C:\vcpkg\installed\x64-windows" -DLIB_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="C:\vcpkg\installed\x64-windows\include" -DSSL_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x64-windows\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" 
+        cmake --build . --config Release
+        Copy-Item C:\mysql-5.7.21-winx64\lib\libmysql.dll -Destination .\bin\Release\
+        Copy-Item C:\mysql-5.7.21-winx64\bin\mysql.exe -Destination .\bin\Release\
+        echo $GITHUB_WORKSPACE
+    #- name: Check executables
+      #run: |
+      #  cd D:\a\TrinityCore-NPCBOT-Eluna-zhCN\TrinityCore-NPCBOT-Eluna-zhCN\bin\bin\Release\
+      #  authserver.exe --version
+       # worldserver.exe --version
+    - name: 7zip pack
+      uses: DuckSoft/create-7z-action@v1.0
+      with:
+      # file/folder path to compress
+        pathSource: D:\a\TrinityCore-NPCBOT-Eluna-zhCN\TrinityCore-NPCBOT-Eluna-zhCN\bin\bin\
+    # 7z archive path to write
         pathTarget: \TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win64.7z
     - name: Upload Release Asset
       id: upload-release-asset
@@ -114,7 +205,6 @@ jobs:
          asset_path: \TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win64.7z
          asset_name: TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win64.7z
          asset_content_type: application/7z
-
       
   build-linux:
     needs: [create_release]
