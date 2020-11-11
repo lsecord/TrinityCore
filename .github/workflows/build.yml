@@ -76,7 +76,7 @@ jobs:
         path: | 
              C:\OpenSSL
              C:\mysql-5.7.31-win32
-             #C:\boost
+             C:\boost
         key: ${{ runner.os }}-${{ env.cache-name }}-
     - name: Cache_lib
     #  if: steps.WindowsCache.outputs.cache-hit != 'true'
