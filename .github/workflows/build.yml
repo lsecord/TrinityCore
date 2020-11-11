@@ -2,12 +2,9 @@ name: win64/linux
 on:
  push:
   
- pull_request:
-
-      
-# push:
-   # tags: 
-   #   - 'v*'
+# pull_request：
+    tags: 
+      - 'v*'
 jobs:
   create_release:
     runs-on: ubuntu-latest
@@ -61,7 +58,7 @@ jobs:
      #     name: upload_url
      #     path: ./upload_url.txt
   build-windowsx86:
-   # needs: [create_release]
+    needs: [create_release]
     runs-on: windows-latest
     env:
          OPENSSL_DIR: C:\OpenSSL
@@ -169,7 +166,7 @@ jobs:
          asset_name: TrinityCore-NPCBOT-Eluna-zhCN_${{ needs.create_release.outputs.get_version }}_win32.7z
          asset_content_type: application/7z
   build-windowsx64:
-    #needs: [create_release]
+    needs: [create_release]
     runs-on: windows-latest
     steps:
     - name: Cache
