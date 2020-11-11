@@ -70,10 +70,10 @@ for:
 
            7z a -t7z TrinityCoreWin32VS2019.7z .\RelWithDebInfo\* -mx=9 -ms=200m -mf -mhc -mhcf -mmt -r
 
-        test: off
-        artifacts:
-        - path: build\bin\TrinityCoreWin32SymbolsVS2019.7z
-          name: TrinityCoreWin32SymbolsVS2019
+      test: off
+      artifacts:
+      - path: build\bin\TrinityCoreWin32SymbolsVS2019.7z
+        name: TrinityCoreWin32SymbolsVS2019
 
-        - path: build\bin\TrinityCoreWin32VS2019.7z
-          name: TrinityCoreWin32VS2019
+      - path: build\bin\TrinityCoreWin32VS2019.7z
+        name: TrinityCoreWin32VS2019
