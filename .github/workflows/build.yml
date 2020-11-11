@@ -92,9 +92,9 @@ jobs:
     - name: setup-msbuild
       uses: microsoft/setup-msbuild@v1
     - name: add lib
+      shell: powershell
       run: |
               $powershell
-              echo ${env:APPVEYOR_BUILD_FOLDER}
               if (Test-Path "C:\OpenSSL") {
                   echo "using OpenSSL_1_1_1h from cache"
                   Get-ChildItem $env:OPENSSL_DIR
