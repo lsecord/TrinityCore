@@ -106,7 +106,6 @@ jobs:
               }
               if (Test-Path "C:\boost") {
                   echo "using C:\boost from cache"
-                  $Boost_DIR = "C:\boost"
               }
               else
               {
@@ -121,24 +120,20 @@ jobs:
                   Get-ChildItem C:\boost
                   $env:INCLUDE = "C:\mysql-5.7.31-win32\include;" + $env:INCLUDE
                   $env:LIB     = "C:\mysql-5.7.31-win32\lib;" + $env:LIB
+                  $Boost_DIR = "C:\boost"
+                  $env:BOOST_ROOT=$env:Boost_DIR
                   Get-ChildItem C:\mysql-5.7.31-win32
                   Get-ChildItem C:\OpenSSL
     - name: Checkout
       uses: actions/checkout@v2
     - name: setup-msbuild
       uses: microsoft/setup-msbuild@v1
-    - name: add lib
-      shell: powershell
-      run: |
 
 
     - name: Setup
       shell: cmd
       run: |
         chcp 65001
-        set BOOST_ROOT=%BOOST_ROOT_1_73_0%
-        echo ${{ github.repository }}
-        $env:BOOST_ROOT=$env:BOOST_ROOT_1_73_0
         mkdir bin
         cd bin
         cmake ../ -A win32 -DWITH_WARNINGS=1 -DWITH_COREDEBUG=0 -DUSE_COREPCH=1 -DUSE_SCRIPTPCH=1 -DTOOLS=1 -DSERVERS=1 -DNOJEM=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3 /GR /EHsc" -DCMAKE_C_FLAGS=" /utf-8 /DWIN32 /D_WINDOWS /W3" -DCMAKE_INSTALL_PREFIX=check_install -DBUILD_TESTING=1 -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DOPENSSL_ROOT_DIR:PATH="C:\vcpkg\installed\x86-windows" -DLIB_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libcrypto.lib" -DOPENSSL_INCLUDE_DIR:PATH="C:\vcpkg\installed\x86-windows\include" -DSSL_EAY_RELEASE:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libssl.lib" -DLIB_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libcrypto.lib" -DSSL_EAY_DEBUG:FILEPATH="C:\vcpkg\installed\x86-windows\lib\libssl.lib" -DWITH_WARNINGS:BOOL="0" -DELUNA:BOOL="1" -DMYSQL_INCLUDE_DIR:PATH=C:\mysql-5.7.21-winx86/include" -DMYSQL_LIBRARY:FILEPATH="C:\mysql-5.7.21-winx86/lib/libmysql.lib" 
