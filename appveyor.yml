@@ -1,4 +1,4 @@
-ersion: 1.0.{build}
+version: 1.0.{build}
 configuration: Release
 cache:
     - C:\mysql-5.7.31-win32
