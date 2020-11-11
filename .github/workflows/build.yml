@@ -120,6 +120,7 @@ jobs:
 
 
     - name: Setup
+      shell: cmd
       run: |
         chcp 65001
         #cmd
